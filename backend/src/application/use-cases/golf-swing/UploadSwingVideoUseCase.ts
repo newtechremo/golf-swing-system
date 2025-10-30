@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  Inject,
 } from '@nestjs/common';
 import { ISubjectRepository } from '../../interfaces/repositories/ISubjectRepository';
 import { IGolfSwingAnalysisRepository } from '../../interfaces/repositories/IGolfSwingAnalysisRepository';
@@ -16,7 +17,9 @@ import { v4 as uuidv4 } from 'uuid';
 @Injectable()
 export class UploadSwingVideoUseCase {
   constructor(
+    @Inject('ISubjectRepository')
     private readonly subjectRepository: ISubjectRepository,
+    @Inject('IGolfSwingAnalysisRepository')
     private readonly analysisRepository: IGolfSwingAnalysisRepository,
   ) {}
 

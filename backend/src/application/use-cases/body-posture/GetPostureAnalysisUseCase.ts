@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  Inject,
 } from '@nestjs/common';
 import { IBodyPostureAnalysisRepository } from '../../interfaces/repositories/IBodyPostureAnalysisRepository';
 
@@ -11,6 +12,7 @@ import { IBodyPostureAnalysisRepository } from '../../interfaces/repositories/IB
 @Injectable()
 export class GetPostureAnalysisUseCase {
   constructor(
+    @Inject('IBodyPostureAnalysisRepository')
     private readonly analysisRepository: IBodyPostureAnalysisRepository,
   ) {}
 
@@ -60,35 +62,12 @@ export class GetPostureAnalysisUseCase {
       },
     };
 
-    // 완료된 경우 분석 결과 포함
+    // 완료된 경우 분석 결과 포함 (전체 결과 entity 반환)
     if (isCompleted) {
       result.results = {
-        front: analysis.frontResult
-          ? {
-              headBalance: analysis.frontResult.headBalance,
-              pelvicBalance: analysis.frontResult.pelvicBalance,
-              shoulderBalance: analysis.frontResult.shoulderBalance,
-              kneeBalance: analysis.frontResult.kneeBalance,
-              bodyTilt: analysis.frontResult.bodyTilt,
-              leftLegQAngle: analysis.frontResult.leftLegQAngle,
-              rightLegQAngle: analysis.frontResult.rightLegQAngle,
-            }
-          : null,
-        side: analysis.sideResult
-          ? {
-              neckAngle: analysis.sideResult.neckAngle,
-              shoulderAngle: analysis.sideResult.shoulderAngle,
-              backCurve: analysis.sideResult.backCurve,
-              kneeAngle: analysis.sideResult.kneeAngle,
-            }
-          : null,
-        back: analysis.backResult
-          ? {
-              shoulderBalance: analysis.backResult.shoulderBalance,
-              pelvicBalance: analysis.backResult.pelvicBalance,
-              spinalBalance: analysis.backResult.spinalBalance,
-            }
-          : null,
+        front: analysis.frontResult || null,
+        side: analysis.sideResult || null,
+        back: analysis.backResult || null,
       };
     }
 

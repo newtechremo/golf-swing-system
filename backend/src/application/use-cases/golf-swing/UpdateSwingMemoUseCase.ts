@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  Inject,
 } from '@nestjs/common';
 import { IGolfSwingAnalysisRepository } from '../../interfaces/repositories/IGolfSwingAnalysisRepository';
 
@@ -11,6 +12,7 @@ import { IGolfSwingAnalysisRepository } from '../../interfaces/repositories/IGol
 @Injectable()
 export class UpdateSwingMemoUseCase {
   constructor(
+    @Inject('IGolfSwingAnalysisRepository')
     private readonly analysisRepository: IGolfSwingAnalysisRepository,
   ) {}
 

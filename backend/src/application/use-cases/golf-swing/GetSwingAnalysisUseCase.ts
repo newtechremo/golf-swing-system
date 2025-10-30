@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  Inject,
 } from '@nestjs/common';
 import { IGolfSwingAnalysisRepository } from '../../interfaces/repositories/IGolfSwingAnalysisRepository';
 
@@ -11,6 +12,7 @@ import { IGolfSwingAnalysisRepository } from '../../interfaces/repositories/IGol
 @Injectable()
 export class GetSwingAnalysisUseCase {
   constructor(
+    @Inject('IGolfSwingAnalysisRepository')
     private readonly analysisRepository: IGolfSwingAnalysisRepository,
   ) {}
 
@@ -55,45 +57,9 @@ export class GetSwingAnalysisUseCase {
         name: analysis.subject.name,
         phoneNumber: analysis.subject.phoneNumber,
       },
-      swingType: analysis.swingType
-        ? {
-            swingType: analysis.swingType.swingType,
-            totalFrames: analysis.swingType.totalFrames,
-            fps: analysis.swingType.fps,
-            // Full swing phases
-            addressFrame: analysis.swingType.addressFrame,
-            takebackFrame: analysis.swingType.takebackFrame,
-            backswingFrame: analysis.swingType.backswingFrame,
-            topFrame: analysis.swingType.topFrame,
-            downswingFrame: analysis.swingType.downswingFrame,
-            impactFrame: analysis.swingType.impactFrame,
-            followthroughFrame: analysis.swingType.followthroughFrame,
-            finishFrame: analysis.swingType.finishFrame,
-            // Half swing phases
-            halfAddressFrame: analysis.swingType.halfAddressFrame,
-            halfBackswingFrame: analysis.swingType.halfBackswingFrame,
-            halfTopFrame: analysis.swingType.halfTopFrame,
-            halfImpactFrame: analysis.swingType.halfImpactFrame,
-            halfFinishFrame: analysis.swingType.halfFinishFrame,
-          }
-        : null,
-      result: analysis.result
-        ? {
-            totalScore: analysis.result.totalScore,
-            posture: analysis.result.posture,
-            armMovement: analysis.result.armMovement,
-            bodyRotation: analysis.result.bodyRotation,
-            tempo: analysis.result.tempo,
-            // ... 기타 메트릭
-          }
-        : null,
-      angle: analysis.angle
-        ? {
-            kneeLine: analysis.angle.kneeLine,
-            pelvis: analysis.angle.pelvis,
-            shoulderLine: analysis.angle.shoulderLine,
-          }
-        : null,
+      swingType: analysis.swingType || null,
+      result: analysis.result || null,
+      angle: analysis.angle || null,
     };
   }
 }

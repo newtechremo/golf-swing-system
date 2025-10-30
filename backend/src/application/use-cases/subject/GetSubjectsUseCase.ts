@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { ISubjectRepository } from '../../interfaces/repositories/ISubjectRepository';
 import { IGolfSwingAnalysisRepository } from '../../interfaces/repositories/IGolfSwingAnalysisRepository';
 import { IBodyPostureAnalysisRepository } from '../../interfaces/repositories/IBodyPostureAnalysisRepository';
@@ -14,8 +14,11 @@ import {
 @Injectable()
 export class GetSubjectsUseCase {
   constructor(
+    @Inject('ISubjectRepository')
     private readonly subjectRepository: ISubjectRepository,
+    @Inject('IGolfSwingAnalysisRepository')
     private readonly golfSwingRepository: IGolfSwingAnalysisRepository,
+    @Inject('IBodyPostureAnalysisRepository')
     private readonly postureRepository: IBodyPostureAnalysisRepository,
   ) {}
 

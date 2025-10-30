@@ -1,26 +1,27 @@
-// Common DTOs
+// Export all DTOs for easy importing
+
+// Auth
+export * from './auth/AuthResponse.dto';
+export * from './auth/LoginUser.dto';
+
+// Common
 export * from './common/ApiResponse.dto';
 
-// Auth DTOs
-export * from './auth/LoginInstructor.dto';
-export * from './auth/LoginMember.dto';
-export * from './auth/AuthResponse.dto';
+// Subject (formerly Member)
+export * from './subject/CreateSubject.dto';
+export * from './subject/UpdateSubject.dto';
+export * from './subject/SubjectResponse.dto';
 
-// Member DTOs
-export * from './member/CreateMember.dto';
-export * from './member/UpdateMember.dto';
-export * from './member/MemberResponse.dto';
-
-// Golf Swing DTOs
-export * from './golf-swing/UploadSwingVideo.dto';
+// Golf Swing
 export * from './golf-swing/SwingAnalysisResponse.dto';
+export * from './golf-swing/UploadSwingVideo.dto';
 
-// Posture DTOs
-export * from './posture/UploadPostureImages.dto';
+// Body Posture
 export * from './posture/PostureAnalysisResponse.dto';
+export * from './posture/UploadPostureImages.dto';
 
-// History DTOs
+// History
 export * from './history/AnalysisHistory.dto';
 
-// PDF DTOs
+// PDF
 export * from './pdf/GeneratePdf.dto';

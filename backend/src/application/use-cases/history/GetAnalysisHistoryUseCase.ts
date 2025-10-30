@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  Inject,
 } from '@nestjs/common';
 import { ISubjectRepository } from '../../interfaces/repositories/ISubjectRepository';
 import { IGolfSwingAnalysisRepository } from '../../interfaces/repositories/IGolfSwingAnalysisRepository';
@@ -14,8 +15,11 @@ import { IBodyPostureAnalysisRepository } from '../../interfaces/repositories/IB
 @Injectable()
 export class GetAnalysisHistoryUseCase {
   constructor(
+    @Inject('ISubjectRepository')
     private readonly subjectRepository: ISubjectRepository,
+    @Inject('IGolfSwingAnalysisRepository')
     private readonly golfSwingRepository: IGolfSwingAnalysisRepository,
+    @Inject('IBodyPostureAnalysisRepository')
     private readonly postureRepository: IBodyPostureAnalysisRepository,
   ) {}
 
@@ -125,7 +129,7 @@ export class GetAnalysisHistoryUseCase {
         date: h.date.toISOString().split('T')[0],
         status: h.status,
         memo: h.memo,
-        swingType: h.swingType,
+        swingType: (h as any).swingType || undefined,
       })),
       pagination: {
         total,

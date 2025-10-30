@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  Inject,
 } from '@nestjs/common';
 import { IBodyPostureAnalysisRepository } from '../../interfaces/repositories/IBodyPostureAnalysisRepository';
 
@@ -11,6 +12,7 @@ import { IBodyPostureAnalysisRepository } from '../../interfaces/repositories/IB
 @Injectable()
 export class UpdatePostureMemoUseCase {
   constructor(
+    @Inject('IBodyPostureAnalysisRepository')
     private readonly analysisRepository: IBodyPostureAnalysisRepository,
   ) {}
 

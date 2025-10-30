@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  Inject,
 } from '@nestjs/common';
 import { ISubjectRepository } from '../../interfaces/repositories/ISubjectRepository';
 import { IGolfSwingAnalysisRepository } from '../../interfaces/repositories/IGolfSwingAnalysisRepository';
@@ -15,8 +16,11 @@ import { SubjectDetailDto } from '../../dto/subject/SubjectResponse.dto';
 @Injectable()
 export class GetSubjectDetailUseCase {
   constructor(
+    @Inject('ISubjectRepository')
     private readonly subjectRepository: ISubjectRepository,
+    @Inject('IGolfSwingAnalysisRepository')
     private readonly golfSwingRepository: IGolfSwingAnalysisRepository,
+    @Inject('IBodyPostureAnalysisRepository')
     private readonly postureRepository: IBodyPostureAnalysisRepository,
   ) {}
 

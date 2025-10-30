@@ -1,4 +1,4 @@
-import { Injectable, ConflictException } from '@nestjs/common';
+import { Injectable, ConflictException, Inject } from '@nestjs/common';
 import { ISubjectRepository } from '../../interfaces/repositories/ISubjectRepository';
 import { CreateSubjectDto } from '../../dto/subject/CreateSubject.dto';
 import { SubjectResponseDto } from '../../dto/subject/SubjectResponse.dto';
@@ -9,7 +9,10 @@ import { SubjectResponseDto } from '../../dto/subject/SubjectResponse.dto';
  */
 @Injectable()
 export class CreateSubjectUseCase {
-  constructor(private readonly subjectRepository: ISubjectRepository) {}
+  constructor(
+    @Inject('ISubjectRepository')
+    private readonly subjectRepository: ISubjectRepository,
+  ) {}
 
   async execute(
     userId: number,

@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  Inject,
 } from '@nestjs/common';
 import { ISubjectRepository } from '../../interfaces/repositories/ISubjectRepository';
 import { IBodyPostureAnalysisRepository } from '../../interfaces/repositories/IBodyPostureAnalysisRepository';
@@ -16,7 +17,9 @@ import { v4 as uuidv4 } from 'uuid';
 @Injectable()
 export class UploadPostureImagesUseCase {
   constructor(
+    @Inject('ISubjectRepository')
     private readonly subjectRepository: ISubjectRepository,
+    @Inject('IBodyPostureAnalysisRepository')
     private readonly analysisRepository: IBodyPostureAnalysisRepository,
   ) {}
 

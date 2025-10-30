@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  Inject,
 } from '@nestjs/common';
 import { ISubjectRepository } from '../../interfaces/repositories/ISubjectRepository';
 import { UpdateSubjectDto } from '../../dto/subject/UpdateSubject.dto';
@@ -12,7 +13,10 @@ import { SubjectResponseDto } from '../../dto/subject/SubjectResponse.dto';
  */
 @Injectable()
 export class UpdateSubjectUseCase {
-  constructor(private readonly subjectRepository: ISubjectRepository) {}
+  constructor(
+    @Inject('ISubjectRepository')
+    private readonly subjectRepository: ISubjectRepository,
+  ) {}
 
   async execute(
     userId: number,

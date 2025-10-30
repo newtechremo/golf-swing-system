@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  Inject,
 } from '@nestjs/common';
 import { ISubjectRepository } from '../../interfaces/repositories/ISubjectRepository';
 
@@ -11,7 +12,10 @@ import { ISubjectRepository } from '../../interfaces/repositories/ISubjectReposi
  */
 @Injectable()
 export class DeleteSubjectUseCase {
-  constructor(private readonly subjectRepository: ISubjectRepository) {}
+  constructor(
+    @Inject('ISubjectRepository')
+    private readonly subjectRepository: ISubjectRepository,
+  ) {}
 
   async execute(userId: number, subjectId: number): Promise<void> {
     // 대상자 조회
