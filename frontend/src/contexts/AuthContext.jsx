@@ -4,7 +4,7 @@ import { authService } from '../services/auth';
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(null);  // 강사 정보
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -19,7 +19,7 @@ export const AuthProvider = ({ children }) => {
         const hasValidToken = authService.isAuthenticated();
 
         if (storedUser && hasValidToken && !authService.isTokenExpired()) {
-          // 유효한 토큰과 사용자 정보가 있으면 복원
+          // 유효한 토큰과 강사 정보가 있으면 복원
           setUser(storedUser);
           setIsAuthenticated(true);
         } else if (storedUser && authService.isTokenExpired()) {
@@ -46,13 +46,13 @@ export const AuthProvider = ({ children }) => {
     initializeAuth();
   }, []);
 
-  // 강사 로그인
-  const loginInstructor = async (credentials) => {
+  // 강사 로그인 (username + password)
+  const login = async (credentials) => {
     try {
       setLoading(true);
       setError(null);
 
-      const result = await authService.loginInstructor(credentials);
+      const result = await authService.login(credentials);
 
       if (result.success) {
         setUser(result.data.user);
@@ -71,31 +71,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // 회원 로그인 (전화번호)
-  const loginMember = async (instructorId, phoneNumber) => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const result = await authService.loginMember(instructorId, phoneNumber);
-
-      if (result.success) {
-        setUser(result.data.user);
-        setIsAuthenticated(true);
-      } else {
-        setError(result.error.message);
-      }
-
-      return result;
-    } catch (err) {
-      console.error('[AuthContext] Member login error:', err);
-      setError(err.message);
-      return { success: false, error: { message: err.message } };
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // 로그아웃
   const logout = () => {
     authService.logout();
@@ -105,12 +80,11 @@ export const AuthProvider = ({ children }) => {
   };
 
   const value = {
-    user,
+    user,  // 강사 정보
     isAuthenticated,
     loading,
     error,
-    loginInstructor,
-    loginMember,
+    login,
     logout,
   };
 

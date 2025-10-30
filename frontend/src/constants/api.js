@@ -1,17 +1,17 @@
-// API Endpoints
+// API Endpoints (변경된 구조: Center → User(강사) → Subject(대상자) → Analysis)
 export const API_ENDPOINTS = {
   AUTH: {
-    INSTRUCTOR_LOGIN: '/auth/instructor/login',
-    MEMBER_LOGIN: '/auth/member/login',
+    LOGIN: '/auth/login',  // 강사 로그인 (username + password)
     REFRESH: '/auth/refresh',
   },
-  MEMBERS: {
-    LIST: '/members',
-    CREATE: '/members',
-    GET_BY_ID: (id) => `/members/${id}`,
-    UPDATE: (id) => `/members/${id}`,
-    HISTORY: (id) => `/members/${id}/history`,
-    CALENDAR: (id) => `/members/${id}/history/calendar`,
+  SUBJECTS: {
+    LIST: '/subjects',
+    CREATE: '/subjects',
+    GET_BY_ID: (id) => `/subjects/${id}`,
+    UPDATE: (id) => `/subjects/${id}`,
+    DELETE: (id) => `/subjects/${id}`,
+    SEARCH: '/subjects/search',
+    ANALYSES: (id) => `/subjects/${id}/analyses`,  // 대상자별 분석 이력
   },
   GOLF_SWING: {
     ANALYZE: '/golf-swing/analyze',
@@ -28,31 +28,32 @@ export const API_ENDPOINTS = {
     POSTURE: (id) => `/pdf/posture/${id}`,
     DOWNLOAD: (token) => `/pdf/download/${token}`,
   },
-  INSTRUCTORS: {
-    LIST: '/instructors/active/list',
+  HISTORY: {
+    LIST: '/history',  // Query params: subjectId, type, page, limit
+    CALENDAR: '/history/calendar',  // Query params: subjectId, year, month
   },
 };
 
 // Routes
 export const ROUTES = {
   HOME: '/',
-  INSTRUCTOR_SELECT: '/instructor-select',
-  MEMBER_AUTH: '/member-auth',
+  LOGIN: '/login',  // 강사 로그인
   DASHBOARD: '/dashboard',
-  MEMBER_LIST: '/members',
-  MEMBER_DETAIL: '/members/:memberId',
+  SUBJECT_LIST: '/subjects',
+  SUBJECT_CREATE: '/subjects/new',
+  SUBJECT_DETAIL: '/subjects/:subjectId',
+  SUBJECT_EDIT: '/subjects/:subjectId/edit',
   GOLF_SWING_UPLOAD: '/analysis/golf-swing/upload',
   GOLF_SWING_RESULT: '/analysis/golf-swing/:analysisId',
   POSTURE_UPLOAD: '/analysis/posture/upload',
   POSTURE_RESULT: '/analysis/posture/:analysisId',
-  HISTORY_LIST: '/members/:memberId/history',
-  HISTORY_CALENDAR: '/members/:memberId/calendar',
+  HISTORY: '/history',
 };
 
 // Storage Keys
 export const STORAGE_KEYS = {
-  SELECTED_INSTRUCTOR: 'selectedInstructor',
   ACCESS_TOKEN: 'accessToken',
   REFRESH_TOKEN: 'refreshToken',
-  CURRENT_USER: 'currentUser',
+  CURRENT_USER: 'currentUser',  // 강사 정보
+  SELECTED_SUBJECT: 'selectedSubject',  // 현재 선택된 대상자
 };
