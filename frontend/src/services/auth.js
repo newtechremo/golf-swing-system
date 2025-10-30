@@ -2,46 +2,21 @@ import api, { handleApiError, tokenManager } from './api';
 import { API_ENDPOINTS, STORAGE_KEYS } from '../constants/api';
 
 class AuthService {
-  // 강사 로그인
-  async loginInstructor(credentials) {
+  // 강사 로그인 (username + password)
+  async login(credentials) {
     try {
-      const response = await api.post(API_ENDPOINTS.AUTH.INSTRUCTOR_LOGIN, credentials);
-      const { accessToken, refreshToken, instructor } = response.data.data;
+      const response = await api.post(API_ENDPOINTS.AUTH.LOGIN, credentials);
+      const { accessToken, refreshToken, user } = response.data.data;
 
       // 토큰 저장
       tokenManager.setTokens(accessToken, refreshToken);
 
-      // 사용자 정보 저장
-      this.saveUserToStorage(instructor);
+      // 강사 정보 저장
+      this.saveUserToStorage(user);
 
       return {
         success: true,
-        data: { accessToken, refreshToken, user: instructor },
-      };
-    } catch (error) {
-      return { success: false, error: handleApiError(error) };
-    }
-  }
-
-  // 회원 로그인 (전화번호)
-  async loginMember(instructorId, phoneNumber) {
-    try {
-      const response = await api.post(API_ENDPOINTS.AUTH.MEMBER_LOGIN, {
-        instructorId,
-        phoneNumber,
-      });
-
-      const { accessToken, member } = response.data.data;
-
-      // 토큰 저장 (회원은 refreshToken이 없을 수 있음)
-      tokenManager.setTokens(accessToken);
-
-      // 사용자 정보 저장
-      this.saveUserToStorage(member);
-
-      return {
-        success: true,
-        data: { accessToken, user: member },
+        data: { accessToken, refreshToken, user },
       };
     } catch (error) {
       return { success: false, error: handleApiError(error) };
@@ -71,9 +46,10 @@ class AuthService {
   // 로그아웃
   logout() {
     tokenManager.clearTokens();
+    localStorage.removeItem(STORAGE_KEYS.SELECTED_SUBJECT);
   }
 
-  // 현재 사용자 정보 저장
+  // 강사 정보 저장
   saveUserToStorage(user) {
     try {
       localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
@@ -82,7 +58,7 @@ class AuthService {
     }
   }
 
-  // 로컬스토리지에서 사용자 정보 가져오기
+  // 로컬스토리지에서 강사 정보 가져오기
   getCurrentUserFromStorage() {
     try {
       const userStr = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
