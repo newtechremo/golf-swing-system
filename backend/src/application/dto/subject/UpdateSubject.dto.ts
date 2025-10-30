@@ -7,7 +7,10 @@ import {
   IsEmail,
 } from 'class-validator';
 
-export class UpdateMemberDto {
+/**
+ * 대상자 정보 수정 DTO
+ */
+export class UpdateSubjectDto {
   @IsOptional()
   @IsString()
   name?: string;
@@ -31,4 +34,12 @@ export class UpdateMemberDto {
   @IsOptional()
   @IsEmail()
   email?: string;
+
+  @IsOptional()
+  @IsString()
+  memo?: string;
+
+  @IsOptional()
+  @IsEnum(['active', 'inactive', 'deleted'])
+  status?: 'active' | 'inactive' | 'deleted';
 }

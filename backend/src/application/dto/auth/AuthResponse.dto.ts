@@ -1,4 +1,7 @@
-export class InstructorDto {
+/**
+ * 강사 정보 DTO
+ */
+export class UserDto {
   id: number;
   username: string;
   name: string;
@@ -9,30 +12,22 @@ export class InstructorDto {
   certificationNumber?: string;
   subscriptionEndDate?: Date;
   status: 'active' | 'inactive' | 'suspended';
+  centerId: number;
+  centerName?: string;
 }
 
-export class MemberDto {
-  id: number;
-  phoneNumber: string;
-  name: string;
-  birthDate?: Date;
-  gender?: 'M' | 'F' | 'Other';
-  height?: number;
-  weight?: number;
-  status: 'active' | 'inactive' | 'deleted';
-  instructor: {
-    id: number;
-    name: string;
-  };
-}
-
+/**
+ * 로그인 응답 DTO
+ */
 export class AuthResponseDto {
   accessToken: string;
   refreshToken: string;
-  instructor?: InstructorDto;
-  member?: MemberDto;
+  user: UserDto; // 강사 정보
 }
 
+/**
+ * 토큰 갱신 응답 DTO
+ */
 export class RefreshTokenResponseDto {
   accessToken: string;
 }

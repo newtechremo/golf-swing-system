@@ -9,7 +9,11 @@ import {
   IsEmail,
 } from 'class-validator';
 
-export class CreateMemberDto {
+/**
+ * 대상자 생성 DTO
+ * 강사가 새로운 분석 대상자를 등록할 때 사용합니다.
+ */
+export class CreateSubjectDto {
   @IsString()
   @IsNotEmpty()
   @Matches(/^010-\d{4}-\d{4}$/, {
@@ -40,4 +44,8 @@ export class CreateMemberDto {
   @IsOptional()
   @IsEmail()
   email?: string;
+
+  @IsOptional()
+  @IsString()
+  memo?: string;
 }

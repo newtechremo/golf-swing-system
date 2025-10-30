@@ -1,16 +1,19 @@
 import { GolfSwingAnalysisEntity } from '../../../infrastructure/database/entities/golf-swing-analysis.entity';
 
+/**
+ * 골프 스윙 분석 리포지토리 인터페이스
+ */
 export interface IGolfSwingAnalysisRepository {
   findById(id: number): Promise<GolfSwingAnalysisEntity | null>;
-  findByUser(userId: number): Promise<GolfSwingAnalysisEntity[]>;
-  findByUserAndDateRange(
-    userId: number,
+  findBySubject(subjectId: number): Promise<GolfSwingAnalysisEntity[]>;
+  findBySubjectAndDateRange(
+    subjectId: number,
     startDate: Date,
     endDate: Date,
   ): Promise<GolfSwingAnalysisEntity[]>;
-  findByInstructor(instructorId: number): Promise<GolfSwingAnalysisEntity[]>;
-  findByInstructorAndDateRange(
-    instructorId: number,
+  findByUser(userId: number): Promise<GolfSwingAnalysisEntity[]>; // 강사의 모든 분석
+  findByUserAndDateRange(
+    userId: number,
     startDate: Date,
     endDate: Date,
   ): Promise<GolfSwingAnalysisEntity[]>;
@@ -25,7 +28,7 @@ export interface IGolfSwingAnalysisRepository {
   updateMemo(id: number, memo: string): Promise<GolfSwingAnalysisEntity | null>;
   delete(id: number): Promise<boolean>;
   getCalendarData(
-    userId: number,
+    subjectId: number,
     year: number,
     month: number,
   ): Promise<{ date: string; count: number }[]>;

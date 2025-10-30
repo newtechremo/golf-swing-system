@@ -1,5 +1,9 @@
-export class MemberResponseDto {
+/**
+ * 대상자 기본 응답 DTO
+ */
+export class SubjectResponseDto {
   id: number;
+  userId: number; // 담당 강사 ID
   phoneNumber: string;
   name: string;
   birthDate?: Date;
@@ -7,14 +11,16 @@ export class MemberResponseDto {
   height?: number;
   weight?: number;
   email?: string;
+  memo?: string;
   status: 'active' | 'inactive' | 'deleted';
-  instructorId: number;
-  lastLoginAt?: Date;
   createdAt: Date;
   updatedAt?: Date;
 }
 
-export class MemberListItemDto {
+/**
+ * 대상자 목록 아이템 DTO
+ */
+export class SubjectListItemDto {
   id: number;
   phoneNumber: string;
   name: string;
@@ -23,7 +29,6 @@ export class MemberListItemDto {
   height?: number;
   weight?: number;
   status: 'active' | 'inactive' | 'deleted';
-  lastLoginAt?: Date;
   createdAt: Date;
   analysisCount: {
     golfSwing: number;
@@ -31,7 +36,10 @@ export class MemberListItemDto {
   };
 }
 
-export class MemberDetailDto extends MemberResponseDto {
+/**
+ * 대상자 상세 정보 DTO (최근 분석 이력 포함)
+ */
+export class SubjectDetailDto extends SubjectResponseDto {
   recentAnalyses: {
     golfSwing: Array<{
       id: number;
@@ -47,7 +55,10 @@ export class MemberDetailDto extends MemberResponseDto {
   };
 }
 
-export class GetMembersQueryDto {
+/**
+ * 대상자 목록 조회 쿼리 DTO
+ */
+export class GetSubjectsQueryDto {
   page?: number;
   limit?: number;
   search?: string;

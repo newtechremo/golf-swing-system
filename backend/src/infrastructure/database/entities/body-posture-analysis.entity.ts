@@ -10,23 +10,27 @@ import {
   Index,
 } from 'typeorm';
 import { UserEntity } from './user.entity';
-import { InstructorEntity } from './instructor.entity';
+import { SubjectEntity } from './subject.entity';
 import { FrontPostureResultEntity } from './front-posture-result.entity';
 import { SidePostureResultEntity } from './side-posture-result.entity';
 import { BackPostureResultEntity } from './back-posture-result.entity';
 
+/**
+ * BodyPostureAnalysisEntity - 신체 자세 분석 정보
+ * 대상자(Subject)의 신체 자세 분석 결과를 저장합니다.
+ */
 @Entity('body_posture_analyses')
 export class BodyPostureAnalysisEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
   @Index()
-  @Column({ name: 'user_id' })
-  userId: number;
+  @Column({ name: 'subject_id' })
+  subjectId: number; // 분석 대상자 ID
 
   @Index()
-  @Column({ name: 'instructor_id' })
-  instructorId: number;
+  @Column({ name: 'user_id' })
+  userId: number; // 담당 강사 ID
 
   // 기본 정보
   @Index()
@@ -98,13 +102,13 @@ export class BodyPostureAnalysisEntity {
   updatedAt: Date;
 
   // Relations
+  @ManyToOne(() => SubjectEntity, (subject) => subject.bodyPostureAnalyses)
+  @JoinColumn({ name: 'subject_id' })
+  subject: SubjectEntity; // 분석 대상자
+
   @ManyToOne(() => UserEntity, (user) => user.bodyPostureAnalyses)
   @JoinColumn({ name: 'user_id' })
-  user: UserEntity;
-
-  @ManyToOne(() => InstructorEntity, (instructor) => instructor.bodyPostureAnalyses)
-  @JoinColumn({ name: 'instructor_id' })
-  instructor: InstructorEntity;
+  user: UserEntity; // 담당 강사
 
   @OneToOne(() => FrontPostureResultEntity, (result) => result.postureAnalysis, {
     cascade: true,

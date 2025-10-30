@@ -1,16 +1,22 @@
 import { UserEntity } from '../../../infrastructure/database/entities/user.entity';
 
+/**
+ * 강사 리포지토리 인터페이스
+ */
 export interface IUserRepository {
   findById(id: number): Promise<UserEntity | null>;
-  findByPhoneNumber(phoneNumber: string): Promise<UserEntity | null>;
-  findByPhoneNumberAndInstructor(
-    phoneNumber: string,
-    instructorId: number,
-  ): Promise<UserEntity | null>;
-  findByInstructorId(instructorId: number): Promise<UserEntity[]>;
+  findByUsername(username: string): Promise<UserEntity | null>;
+  findByCenterId(centerId: number): Promise<UserEntity[]>;
   findAll(): Promise<UserEntity[]>;
   create(user: Partial<UserEntity>): Promise<UserEntity>;
-  update(id: number, user: Partial<UserEntity>): Promise<UserEntity | null>;
+  update(
+    id: number,
+    user: Partial<UserEntity>,
+  ): Promise<UserEntity | null>;
   delete(id: number): Promise<boolean>;
-  searchByName(name: string, instructorId: number): Promise<UserEntity[]>;
+  findWithSubjects(id: number): Promise<UserEntity | null>;
+  updateSubscription(
+    id: number,
+    subscriptionEndDate: Date,
+  ): Promise<UserEntity | null>;
 }
