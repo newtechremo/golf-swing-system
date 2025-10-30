@@ -10,23 +10,27 @@ import {
   Index,
 } from 'typeorm';
 import { UserEntity } from './user.entity';
-import { InstructorEntity } from './instructor.entity';
+import { SubjectEntity } from './subject.entity';
 import { GolfSwingResultEntity } from './golf-swing-result.entity';
 import { GolfSwingAngleEntity } from './golf-swing-angle.entity';
 import { SwingTypeEntity } from './swing-type.entity';
 
+/**
+ * GolfSwingAnalysisEntity - 골프 스윙 분석 정보
+ * 대상자(Subject)의 골프 스윙 분석 결과를 저장합니다.
+ */
 @Entity('golf_swing_analyses')
 export class GolfSwingAnalysisEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
   @Index()
-  @Column({ name: 'user_id' })
-  userId: number;
+  @Column({ name: 'subject_id' })
+  subjectId: number; // 분석 대상자 ID
 
   @Index()
-  @Column({ name: 'instructor_id' })
-  instructorId: number;
+  @Column({ name: 'user_id' })
+  userId: number; // 담당 강사 ID
 
   @Index()
   @Column({ type: 'varchar', length: 100, unique: true })
@@ -72,13 +76,13 @@ export class GolfSwingAnalysisEntity {
   updatedAt: Date;
 
   // Relations
+  @ManyToOne(() => SubjectEntity, (subject) => subject.golfSwingAnalyses)
+  @JoinColumn({ name: 'subject_id' })
+  subject: SubjectEntity; // 분석 대상자
+
   @ManyToOne(() => UserEntity, (user) => user.golfSwingAnalyses)
   @JoinColumn({ name: 'user_id' })
-  user: UserEntity;
-
-  @ManyToOne(() => InstructorEntity, (instructor) => instructor.golfSwingAnalyses)
-  @JoinColumn({ name: 'instructor_id' })
-  instructor: InstructorEntity;
+  user: UserEntity; // 담당 강사
 
   @OneToOne(() => GolfSwingResultEntity, (result) => result.analysis, {
     cascade: true,
