@@ -32,7 +32,6 @@ export class GolfSwingAnalysisEntity {
   @Column({ name: 'user_id' })
   userId: number; // 담당 강사 ID
 
-  @Index()
   @Column({ type: 'varchar', length: 100, unique: true })
   uuid: string;
 

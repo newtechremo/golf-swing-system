@@ -18,7 +18,6 @@ export class CenterEntity {
   @Column({ type: 'varchar', length: 255 })
   name: string;
 
-  @Index()
   @Column({ type: 'varchar', length: 50, unique: true })
   code: string;
 

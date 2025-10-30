@@ -30,7 +30,6 @@ export class UserEntity {
   centerId: number;
 
   // 로그인 정보
-  @Index()
   @Column({ type: 'varchar', length: 100, unique: true })
   username: string;
 
@@ -41,7 +40,6 @@ export class UserEntity {
   @Column({ type: 'varchar', length: 100 })
   name: string;
 
-  @Index()
   @Column({ name: 'phone_number', type: 'varchar', length: 20, unique: true })
   phoneNumber: string;
 

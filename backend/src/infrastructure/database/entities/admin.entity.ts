@@ -17,7 +17,6 @@ export class AdminEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Index()
   @Column({ type: 'varchar', length: 100, unique: true })
   username: string;
 
