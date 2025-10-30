@@ -1,9 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Like } from 'typeorm';
+import { Repository } from 'typeorm';
 import { UserEntity } from '../entities/user.entity';
 import { IUserRepository } from '../../../application/interfaces/repositories/IUserRepository';
 
+/**
+ * 강사 리포지토리
+ */
 @Injectable()
 export class UserRepository implements IUserRepository {
   constructor(
@@ -14,39 +17,26 @@ export class UserRepository implements IUserRepository {
   async findById(id: number): Promise<UserEntity | null> {
     return await this.repository.findOne({
       where: { id },
-      relations: ['instructor'],
+      relations: ['center'],
     });
   }
 
-  async findByPhoneNumber(phoneNumber: string): Promise<UserEntity | null> {
+  async findByUsername(username: string): Promise<UserEntity | null> {
     return await this.repository.findOne({
-      where: { phoneNumber },
+      where: { username },
     });
   }
 
-  async findByPhoneNumberAndInstructor(
-    phoneNumber: string,
-    instructorId: number,
-  ): Promise<UserEntity | null> {
-    return await this.repository.findOne({
-      where: {
-        phoneNumber,
-        instructorId,
-      },
-      relations: ['instructor'],
-    });
-  }
-
-  async findByInstructorId(instructorId: number): Promise<UserEntity[]> {
+  async findByCenterId(centerId: number): Promise<UserEntity[]> {
     return await this.repository.find({
-      where: { instructorId },
+      where: { centerId },
       order: { createdAt: 'DESC' },
     });
   }
 
   async findAll(): Promise<UserEntity[]> {
     return await this.repository.find({
-      relations: ['instructor'],
+      relations: ['center'],
       order: { createdAt: 'DESC' },
     });
   }
@@ -56,7 +46,10 @@ export class UserRepository implements IUserRepository {
     return await this.repository.save(newUser);
   }
 
-  async update(id: number, user: Partial<UserEntity>): Promise<UserEntity | null> {
+  async update(
+    id: number,
+    user: Partial<UserEntity>,
+  ): Promise<UserEntity | null> {
     await this.repository.update(id, user);
     return await this.findById(id);
   }
@@ -66,13 +59,18 @@ export class UserRepository implements IUserRepository {
     return result.affected > 0;
   }
 
-  async searchByName(name: string, instructorId: number): Promise<UserEntity[]> {
-    return await this.repository.find({
-      where: {
-        name: Like(`%${name}%`),
-        instructorId,
-      },
-      order: { name: 'ASC' },
+  async findWithSubjects(id: number): Promise<UserEntity | null> {
+    return await this.repository.findOne({
+      where: { id },
+      relations: ['subjects'],
     });
+  }
+
+  async updateSubscription(
+    id: number,
+    subscriptionEndDate: Date,
+  ): Promise<UserEntity | null> {
+    await this.repository.update(id, { subscriptionEndDate });
+    return await this.findById(id);
   }
 }

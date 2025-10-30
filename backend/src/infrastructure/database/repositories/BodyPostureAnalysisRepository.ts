@@ -19,9 +19,31 @@ export class BodyPostureAnalysisRepository
     });
   }
 
+  async findBySubject(subjectId: number): Promise<BodyPostureAnalysisEntity[]> {
+    return await this.repository.find({
+      where: { subjectId },
+      order: { analysisDate: 'DESC' },
+    });
+  }
+
+  async findBySubjectAndDateRange(
+    subjectId: number,
+    startDate: Date,
+    endDate: Date,
+  ): Promise<BodyPostureAnalysisEntity[]> {
+    return await this.repository.find({
+      where: {
+        subjectId,
+        analysisDate: Between(startDate, endDate),
+      },
+      order: { analysisDate: 'DESC' },
+    });
+  }
+
   async findByUser(userId: number): Promise<BodyPostureAnalysisEntity[]> {
     return await this.repository.find({
       where: { userId },
+      relations: ['subject'],
       order: { analysisDate: 'DESC' },
     });
   }
@@ -36,29 +58,7 @@ export class BodyPostureAnalysisRepository
         userId,
         analysisDate: Between(startDate, endDate),
       },
-      order: { analysisDate: 'DESC' },
-    });
-  }
-
-  async findByInstructor(instructorId: number): Promise<BodyPostureAnalysisEntity[]> {
-    return await this.repository.find({
-      where: { instructorId },
-      relations: ['user'],
-      order: { analysisDate: 'DESC' },
-    });
-  }
-
-  async findByInstructorAndDateRange(
-    instructorId: number,
-    startDate: Date,
-    endDate: Date,
-  ): Promise<BodyPostureAnalysisEntity[]> {
-    return await this.repository.find({
-      where: {
-        instructorId,
-        analysisDate: Between(startDate, endDate),
-      },
-      relations: ['user'],
+      relations: ['subject'],
       order: { analysisDate: 'DESC' },
     });
   }
@@ -67,11 +67,11 @@ export class BodyPostureAnalysisRepository
     return await this.repository.findOne({
       where: { id },
       relations: [
+        'subject',
         'user',
-        'instructor',
-        'frontPostureResult',
-        'sidePostureResult',
-        'backPostureResult',
+        'frontResult',
+        'sideResult',
+        'backResult',
       ],
     });
   }
@@ -105,7 +105,7 @@ export class BodyPostureAnalysisRepository
   }
 
   async getCalendarData(
-    userId: number,
+    subjectId: number,
     year: number,
     month: number,
   ): Promise<{ date: string; count: number }[]> {
@@ -116,7 +116,7 @@ export class BodyPostureAnalysisRepository
       .createQueryBuilder('analysis')
       .select('DATE(analysis.analysisDate)', 'date')
       .addSelect('COUNT(*)', 'count')
-      .where('analysis.userId = :userId', { userId })
+      .where('analysis.subjectId = :subjectId', { subjectId })
       .andWhere('analysis.analysisDate BETWEEN :startDate AND :endDate', {
         startDate,
         endDate,
