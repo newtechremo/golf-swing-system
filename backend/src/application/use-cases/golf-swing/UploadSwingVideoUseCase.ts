@@ -4,8 +4,11 @@ import {
   ForbiddenException,
   Inject,
 } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { ISubjectRepository } from '../../interfaces/repositories/ISubjectRepository';
 import { IGolfSwingAnalysisRepository } from '../../interfaces/repositories/IGolfSwingAnalysisRepository';
+import { SwingTypeEntity } from '../../../infrastructure/database/entities/swing-type.entity';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -21,6 +24,8 @@ export class UploadSwingVideoUseCase {
     private readonly subjectRepository: ISubjectRepository,
     @Inject('IGolfSwingAnalysisRepository')
     private readonly analysisRepository: IGolfSwingAnalysisRepository,
+    @InjectRepository(SwingTypeEntity)
+    private readonly swingTypeRepository: Repository<SwingTypeEntity>,
   ) {}
 
   async execute(
@@ -28,6 +33,7 @@ export class UploadSwingVideoUseCase {
     subjectId: number,
     videoS3Key: string,
     videoUrl: string,
+    swingType: 'full' | 'half',
     height?: string,
   ): Promise<{ analysisId: number; uuid: string }> {
     // 대상자 조회 및 권한 확인
@@ -54,6 +60,12 @@ export class UploadSwingVideoUseCase {
       videoUrl,
       videoS3Key,
       status: 'pending', // REMO API 호출 전 대기 상태
+    });
+
+    // SwingType 레코드 생성
+    await this.swingTypeRepository.save({
+      analysisId: analysis.id,
+      swingType: swingType,
     });
 
     // 실제 REMO API 호출은 Controller 또는 별도 Service에서 처리
