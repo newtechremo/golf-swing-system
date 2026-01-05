@@ -6,13 +6,12 @@ import {
 } from '@nestjs/common';
 import { ISubjectRepository } from '../../interfaces/repositories/ISubjectRepository';
 import { IBodyPostureAnalysisRepository } from '../../interfaces/repositories/IBodyPostureAnalysisRepository';
-import { v4 as uuidv4 } from 'uuid';
 
 /**
  * 신체 자세 이미지 업로드 및 분석 시작 Use Case
  *
  * A-pose 3방향 (정면, 측면, 후면) 이미지를 업로드하고 분석을 시작합니다.
- * 실제 REMO API 호출은 RemoPostureService에서 처리합니다.
+ * REMO API UUID는 Controller에서 전달받습니다.
  */
 @Injectable()
 export class UploadPostureImagesUseCase {
@@ -29,12 +28,26 @@ export class UploadPostureImagesUseCase {
     images: {
       frontS3Key: string;
       frontUrl: string;
-      sideS3Key: string;
-      sideUrl: string;
+      leftSideS3Key: string;
+      leftSideUrl: string;
+      rightSideS3Key: string;
+      rightSideUrl: string;
       backS3Key: string;
       backUrl: string;
     },
-  ): Promise<{ analysisId: number; uuids: { front: string; side: string; back: string } }> {
+    remoData: {
+      frontUuid: string;
+      leftSideUuid: string;
+      rightSideUuid: string;
+      backUuid: string;
+    },
+    status?: {
+      frontStatus: 'pending' | 'completed' | 'failed';
+      leftSideStatus: 'pending' | 'completed' | 'failed';
+      rightSideStatus: 'pending' | 'completed' | 'failed';
+      backStatus: 'pending' | 'completed' | 'failed';
+    },
+  ): Promise<{ analysisId: number; uuids: { front: string; leftSide: string; rightSide: string; back: string } }> {
     // 대상자 조회 및 권한 확인
     const subject = await this.subjectRepository.findById(subjectId);
 
@@ -46,38 +59,36 @@ export class UploadPostureImagesUseCase {
       throw new ForbiddenException('이 대상자에 대한 분석 권한이 없습니다.');
     }
 
-    // UUIDs 생성
-    const frontUuid = uuidv4();
-    const sideUuid = uuidv4();
-    const backUuid = uuidv4();
-
-    // 분석 레코드 생성
+    // 분석 레코드 생성 (REMO API 결과 데이터 저장)
     const analysis = await this.analysisRepository.create({
       subjectId,
       userId,
       analysisDate: new Date(),
       frontImageUrl: images.frontUrl,
       frontImageS3Key: images.frontS3Key,
-      sideImageUrl: images.sideUrl,
-      sideImageS3Key: images.sideS3Key,
+      leftSideImageUrl: images.leftSideUrl,
+      leftSideImageS3Key: images.leftSideS3Key,
+      rightSideImageUrl: images.rightSideUrl,
+      rightSideImageS3Key: images.rightSideS3Key,
       backImageUrl: images.backUrl,
       backImageS3Key: images.backS3Key,
-      frontUuid,
-      sideUuid,
-      backUuid,
-      frontStatus: 'pending',
-      sideStatus: 'pending',
-      backStatus: 'pending',
+      frontUuid: remoData.frontUuid,
+      leftSideUuid: remoData.leftSideUuid,
+      rightSideUuid: remoData.rightSideUuid,
+      backUuid: remoData.backUuid,
+      frontStatus: status?.frontStatus || 'pending',
+      leftSideStatus: status?.leftSideStatus || 'pending',
+      rightSideStatus: status?.rightSideStatus || 'pending',
+      backStatus: status?.backStatus || 'pending',
     });
-
-    // 실제 REMO API 호출은 Controller 또는 별도 Service에서 처리
 
     return {
       analysisId: analysis.id,
       uuids: {
-        front: frontUuid,
-        side: sideUuid,
-        back: backUuid,
+        front: remoData.frontUuid,
+        leftSide: remoData.leftSideUuid,
+        rightSide: remoData.rightSideUuid,
+        back: remoData.backUuid,
       },
     };
   }

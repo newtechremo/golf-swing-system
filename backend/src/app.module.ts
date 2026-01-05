@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 
 // Entities
 import { CenterEntity } from './infrastructure/database/entities/center.entity';
@@ -28,6 +29,7 @@ import { BodyPostureAnalysisRepository } from './infrastructure/database/reposit
 // Use Cases - Auth
 import { LoginUserUseCase } from './application/use-cases/auth/LoginUserUseCase';
 import { RefreshTokenUseCase } from './application/use-cases/auth/RefreshTokenUseCase';
+import { RegisterUserUseCase } from './application/use-cases/auth/RegisterUserUseCase';
 
 // Use Cases - Subject
 import { CreateSubjectUseCase } from './application/use-cases/subject/CreateSubjectUseCase';
@@ -60,6 +62,15 @@ import { HistoryController } from './presentation/controllers/history.controller
 // Guards
 import { JwtAuthGuard } from './presentation/guards/jwt-auth.guard';
 
+// External Services
+import { S3UploadService } from './infrastructure/external-services/s3-upload.service';
+import { RemoApiService } from './infrastructure/external-services/remo-api.service';
+import { PdfGenerationService } from './infrastructure/external-services/pdf-generation.service';
+import { LocalStorageService } from './infrastructure/external-services/local-storage.service';
+
+// Infrastructure Services
+import { GolfSwingScoreService } from './infrastructure/services/golf-swing-score.service';
+
 @Module({
   imports: [
     // Environment configuration
@@ -78,6 +89,7 @@ import { JwtAuthGuard } from './presentation/guards/jwt-auth.guard';
         username: configService.get('DB_USERNAME', 'root'),
         password: configService.get('DB_PASSWORD', ''),
         database: configService.get('DB_DATABASE', 'golf_swing_system'),
+        timezone: '+09:00', // KST timezone
         entities: [
           CenterEntity,
           AdminEntity,
@@ -94,8 +106,10 @@ import { JwtAuthGuard } from './presentation/guards/jwt-auth.guard';
           NoticeEntity,
           NoticeReadEntity,
         ],
+        // WARNING: dropSchema will delete all data! Remove after first run.
+        dropSchema: configService.get('DB_DROP_SCHEMA') === 'true',
         synchronize: configService.get('NODE_ENV') !== 'production',
-        logging: configService.get('NODE_ENV') === 'development',
+        logging: ['error'],
       }),
       inject: [ConfigService],
     }),
@@ -130,6 +144,9 @@ import { JwtAuthGuard } from './presentation/guards/jwt-auth.guard';
       inject: [ConfigService],
       global: true,
     }),
+
+    // Scheduler for periodic tasks (file cleanup)
+    ScheduleModule.forRoot(),
   ],
   controllers: [
     AuthController,
@@ -160,6 +177,7 @@ import { JwtAuthGuard } from './presentation/guards/jwt-auth.guard';
     // Use Cases - Auth
     LoginUserUseCase,
     RefreshTokenUseCase,
+    RegisterUserUseCase,
 
     // Use Cases - Subject
     CreateSubjectUseCase,
@@ -181,6 +199,15 @@ import { JwtAuthGuard } from './presentation/guards/jwt-auth.guard';
     // Use Cases - History
     GetAnalysisHistoryUseCase,
     GetCalendarDataUseCase,
+
+    // External Services
+    S3UploadService,
+    LocalStorageService,
+    RemoApiService,
+    PdfGenerationService,
+
+    // Infrastructure Services
+    GolfSwingScoreService,
 
     // Guards
     JwtAuthGuard,

@@ -5,6 +5,7 @@ import {
   Inject,
 } from '@nestjs/common';
 import { IGolfSwingAnalysisRepository } from '../../interfaces/repositories/IGolfSwingAnalysisRepository';
+import { S3UploadService } from '../../../infrastructure/external-services/s3-upload.service';
 
 /**
  * 골프 스윙 분석 결과 조회 Use Case
@@ -14,6 +15,7 @@ export class GetSwingAnalysisUseCase {
   constructor(
     @Inject('IGolfSwingAnalysisRepository')
     private readonly analysisRepository: IGolfSwingAnalysisRepository,
+    private readonly s3UploadService: S3UploadService,
   ) {}
 
   async execute(userId: number, analysisId: number) {
@@ -44,13 +46,36 @@ export class GetSwingAnalysisUseCase {
       };
     }
 
+    // S3 Presigned URL 생성 (1시간 유효)
+    let videoPresignedUrl: string | null = null;
+    let resultVideoPresignedUrl: string | null = null;
+
+    if (analysis.videoS3Key) {
+      try {
+        videoPresignedUrl = await this.s3UploadService.getPresignedUrl(analysis.videoS3Key, 3600);
+      } catch (err) {
+        // Presigned URL 생성 실패 시 원본 URL 사용
+        videoPresignedUrl = analysis.videoUrl;
+      }
+    }
+
+    if (analysis.resultVideoS3Key) {
+      try {
+        resultVideoPresignedUrl = await this.s3UploadService.getPresignedUrl(analysis.resultVideoS3Key, 3600);
+      } catch (err) {
+        // Presigned URL 생성 실패 시 원본 URL 사용
+        resultVideoPresignedUrl = analysis.resultVideoUrl;
+      }
+    }
+
     // 완료된 분석 결과 반환
     return {
       id: analysis.id,
       uuid: analysis.uuid,
       status: analysis.status,
       analysisDate: analysis.analysisDate,
-      videoUrl: analysis.videoUrl,
+      videoUrl: videoPresignedUrl || analysis.videoUrl,
+      resultVideoUrl: resultVideoPresignedUrl || analysis.resultVideoUrl,
       memo: analysis.memo,
       subject: {
         id: analysis.subject.id,

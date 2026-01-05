@@ -37,7 +37,7 @@ export class GolfSwingAnalysisEntity {
 
   // 기본 정보
   @Index()
-  @Column({ name: 'analysis_date', type: 'date' })
+  @Column({ name: 'analysis_date', type: 'datetime' })
   analysisDate: Date;
 
   @Column({ type: 'varchar', length: 10, nullable: true })
@@ -63,6 +63,13 @@ export class GolfSwingAnalysisEntity {
 
   @Column({ name: 'credit_used', type: 'int', nullable: true })
   creditUsed: number;
+
+  // 결과 비디오 URL (S3에 저장된 분석 결과 비디오)
+  @Column({ name: 'result_video_url', type: 'varchar', length: 500, nullable: true })
+  resultVideoUrl: string;
+
+  @Column({ name: 'result_video_s3_key', type: 'varchar', length: 500, nullable: true })
+  resultVideoS3Key: string;
 
   // 메모
   @Column({ type: 'text', nullable: true })

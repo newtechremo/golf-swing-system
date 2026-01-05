@@ -1,3 +1,6 @@
+import { IsOptional, IsNumber, IsString, IsEnum } from 'class-validator';
+import { Type } from 'class-transformer';
+
 /**
  * 대상자 기본 응답 DTO
  */
@@ -28,6 +31,7 @@ export class SubjectListItemDto {
   gender?: 'M' | 'F' | 'Other';
   height?: number;
   weight?: number;
+  memo?: string;
   status: 'active' | 'inactive' | 'deleted';
   createdAt: Date;
   analysisCount: {
@@ -59,8 +63,21 @@ export class SubjectDetailDto extends SubjectResponseDto {
  * 대상자 목록 조회 쿼리 DTO
  */
 export class GetSubjectsQueryDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
   page?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
   limit?: number;
+
+  @IsOptional()
+  @IsString()
   search?: string;
+
+  @IsOptional()
+  @IsEnum(['active', 'inactive', 'deleted'])
   status?: 'active' | 'inactive' | 'deleted';
 }

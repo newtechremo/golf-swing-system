@@ -72,5 +72,24 @@ backend/*.log
 frontend/node_modules/
 frontend/build/
 frontend/dist/
+frontend/.next/
 frontend/.env*
 frontend/*.log
+frontend/pnpm-lock.yaml
+
+# Zip files and archives
+*.zip
+
+# Temporary/generated files
+nul
+frontend_old/
+golf-swing-analysis-251201/
+
+# Backend results (generated)
+backend/results/
+
+# CSV data files
+*.csv
+
+# Claude settings with secrets
+.claude/settings.local.json

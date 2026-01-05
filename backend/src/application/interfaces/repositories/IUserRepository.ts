@@ -6,6 +6,7 @@ import { UserEntity } from '../../../infrastructure/database/entities/user.entit
 export interface IUserRepository {
   findById(id: number): Promise<UserEntity | null>;
   findByUsername(username: string): Promise<UserEntity | null>;
+  findByEmail(email: string): Promise<UserEntity | null>;
   findByCenterId(centerId: number): Promise<UserEntity[]>;
   findAll(): Promise<UserEntity[]>;
   create(user: Partial<UserEntity>): Promise<UserEntity>;

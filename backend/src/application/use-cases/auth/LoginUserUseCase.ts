@@ -17,18 +17,18 @@ export class LoginUserUseCase {
   ) {}
 
   async execute(dto: LoginUserDto): Promise<AuthResponseDto> {
-    // 사용자명으로 강사 조회
-    const user = await this.userRepository.findByUsername(dto.username);
+    // 이메일로 강사 조회
+    const user = await this.userRepository.findByEmail(dto.email);
 
     if (!user) {
-      throw new UnauthorizedException('잘못된 사용자명 또는 비밀번호입니다.');
+      throw new UnauthorizedException('잘못된 이메일 또는 비밀번호입니다.');
     }
 
     // 비밀번호 검증
     const isPasswordValid = await bcrypt.compare(dto.password, user.passwordHash);
 
     if (!isPasswordValid) {
-      throw new UnauthorizedException('잘못된 사용자명 또는 비밀번호입니다.');
+      throw new UnauthorizedException('잘못된 이메일 또는 비밀번호입니다.');
     }
 
     // 계정 상태 확인

@@ -37,31 +37,49 @@ export class GetSubjectDetailUseCase {
       throw new ForbiddenException('이 대상자를 조회할 권한이 없습니다.');
     }
 
+    // 날짜를 안전하게 ISO 문자열로 변환하는 헬퍼 함수 (시간 포함)
+    const formatDateTime = (date: Date | string | null | undefined): string => {
+      if (!date) return new Date().toISOString();
+      if (typeof date === 'string') return date;
+      return date.toISOString();
+    };
+
     // 최근 골프 스윙 분석 조회 (최근 5개)
     const golfSwingAnalyses = await this.golfSwingRepository.findBySubject(
       subjectId,
     );
     const recentGolfSwing = golfSwingAnalyses.slice(0, 5).map((analysis) => ({
       id: analysis.id,
-      date: analysis.analysisDate.toISOString().split('T')[0],
+      date: formatDateTime(analysis.analysisDate),
       swingType: analysis.swingType?.swingType || 'full',
       status: analysis.status,
+      memo: analysis.memo || null,
     }));
 
     // 최근 신체 자세 분석 조회 (최근 5개)
     const postureAnalyses = await this.postureRepository.findBySubject(
       subjectId,
     );
-    const recentPosture = postureAnalyses.slice(0, 5).map((analysis) => ({
-      id: analysis.id,
-      date: analysis.analysisDate.toISOString().split('T')[0],
-      status:
-        analysis.frontStatus === 'completed' &&
-        analysis.sideStatus === 'completed' &&
-        analysis.backStatus === 'completed'
-          ? 'completed'
-          : 'pending',
-    }));
+    const recentPosture = postureAnalyses.slice(0, 5).map((analysis) => {
+      // 분석된 이미지들의 상태 확인 (업로드되지 않은 이미지는 pending 상태)
+      const uploadedStatuses = [
+        analysis.frontStatus,
+        analysis.leftSideStatus,
+        analysis.rightSideStatus,
+        analysis.backStatus,
+      ].filter(status => status !== 'pending');
+
+      // 분석된 이미지가 1개 이상이고 모두 completed면 전체 완료
+      const isCompleted = uploadedStatuses.length > 0 &&
+        uploadedStatuses.every(status => status === 'completed');
+
+      return {
+        id: analysis.id,
+        date: formatDateTime(analysis.analysisDate),
+        status: isCompleted ? 'completed' : 'pending',
+        memo: analysis.memo || null,
+      };
+    });
 
     return {
       id: subject.id,

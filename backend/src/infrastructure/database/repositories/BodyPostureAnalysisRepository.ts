@@ -70,7 +70,7 @@ export class BodyPostureAnalysisRepository
         'subject',
         'user',
         'frontResult',
-        'sideResult',
+        'sideResults',
         'backResult',
       ],
     });

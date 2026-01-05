@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
   ManyToOne,
   OneToOne,
+  OneToMany,
   JoinColumn,
   Index,
 } from 'typeorm';
@@ -34,7 +35,7 @@ export class BodyPostureAnalysisEntity {
 
   // 기본 정보
   @Index()
-  @Column({ name: 'analysis_date', type: 'date' })
+  @Column({ name: 'analysis_date', type: 'datetime' })
   analysisDate: Date;
 
   // 이미지 정보
@@ -44,11 +45,17 @@ export class BodyPostureAnalysisEntity {
   @Column({ name: 'front_image_s3_key', type: 'varchar', length: 500, nullable: true })
   frontImageS3Key: string;
 
-  @Column({ name: 'side_image_url', type: 'varchar', length: 500, nullable: true })
-  sideImageUrl: string;
+  @Column({ name: 'left_side_image_url', type: 'varchar', length: 500, nullable: true })
+  leftSideImageUrl: string;
 
-  @Column({ name: 'side_image_s3_key', type: 'varchar', length: 500, nullable: true })
-  sideImageS3Key: string;
+  @Column({ name: 'left_side_image_s3_key', type: 'varchar', length: 500, nullable: true })
+  leftSideImageS3Key: string;
+
+  @Column({ name: 'right_side_image_url', type: 'varchar', length: 500, nullable: true })
+  rightSideImageUrl: string;
+
+  @Column({ name: 'right_side_image_s3_key', type: 'varchar', length: 500, nullable: true })
+  rightSideImageS3Key: string;
 
   @Column({ name: 'back_image_url', type: 'varchar', length: 500, nullable: true })
   backImageUrl: string;
@@ -66,12 +73,20 @@ export class BodyPostureAnalysisEntity {
   frontStatus: 'pending' | 'completed' | 'failed';
 
   @Column({
-    name: 'side_status',
+    name: 'left_side_status',
     type: 'enum',
     enum: ['pending', 'completed', 'failed'],
     default: 'pending',
   })
-  sideStatus: 'pending' | 'completed' | 'failed';
+  leftSideStatus: 'pending' | 'completed' | 'failed';
+
+  @Column({
+    name: 'right_side_status',
+    type: 'enum',
+    enum: ['pending', 'completed', 'failed'],
+    default: 'pending',
+  })
+  rightSideStatus: 'pending' | 'completed' | 'failed';
 
   @Column({
     name: 'back_status',
@@ -81,14 +96,17 @@ export class BodyPostureAnalysisEntity {
   })
   backStatus: 'pending' | 'completed' | 'failed';
 
-  // REMO API UUIDs
-  @Column({ name: 'front_uuid', type: 'varchar', length: 100, nullable: true })
+  // REMO API 분석 결과 JSON (skeleton-v2 API는 결과를 즉시 반환)
+  @Column({ name: 'front_uuid', type: 'text', nullable: true })
   frontUuid: string;
 
-  @Column({ name: 'side_uuid', type: 'varchar', length: 100, nullable: true })
-  sideUuid: string;
+  @Column({ name: 'left_side_uuid', type: 'text', nullable: true })
+  leftSideUuid: string;
 
-  @Column({ name: 'back_uuid', type: 'varchar', length: 100, nullable: true })
+  @Column({ name: 'right_side_uuid', type: 'text', nullable: true })
+  rightSideUuid: string;
+
+  @Column({ name: 'back_uuid', type: 'text', nullable: true })
   backUuid: string;
 
   // 메모
@@ -115,10 +133,10 @@ export class BodyPostureAnalysisEntity {
   })
   frontResult: FrontPostureResultEntity;
 
-  @OneToOne(() => SidePostureResultEntity, (result) => result.postureAnalysis, {
+  @OneToMany(() => SidePostureResultEntity, (result) => result.postureAnalysis, {
     cascade: true,
   })
-  sideResult: SidePostureResultEntity;
+  sideResults: SidePostureResultEntity[];
 
   @OneToOne(() => BackPostureResultEntity, (result) => result.postureAnalysis, {
     cascade: true,

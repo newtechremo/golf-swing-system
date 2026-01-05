@@ -38,6 +38,7 @@ export class UpdateSubjectUseCase {
     // 대상자 정보 수정
     const updateData: any = {};
 
+    if (dto.phoneNumber) updateData.phoneNumber = dto.phoneNumber;
     if (dto.name) updateData.name = dto.name;
     if (dto.birthDate) updateData.birthDate = new Date(dto.birthDate);
     if (dto.gender) updateData.gender = dto.gender;

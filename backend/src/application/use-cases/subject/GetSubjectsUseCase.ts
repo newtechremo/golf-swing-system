@@ -73,6 +73,7 @@ export class GetSubjectsUseCase {
           gender: subject.gender,
           height: subject.height,
           weight: subject.weight,
+          memo: subject.memo,
           status: subject.status,
           createdAt: subject.createdAt,
           analysisCount: {

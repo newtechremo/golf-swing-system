@@ -43,14 +43,14 @@ export class SubjectRepository implements ISubjectRepository {
   async findByUserId(userId: number): Promise<SubjectEntity[]> {
     return await this.repository.find({
       where: { userId },
-      order: { createdAt: 'DESC' },
+      order: { id: 'DESC' },
     });
   }
 
   async findAll(): Promise<SubjectEntity[]> {
     return await this.repository.find({
       relations: ['user'],
-      order: { createdAt: 'DESC' },
+      order: { id: 'DESC' },
     });
   }
 

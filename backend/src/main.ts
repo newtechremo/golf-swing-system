@@ -14,10 +14,12 @@ async function bootstrap() {
     }),
   );
 
-  // CORS configuration
+  // CORS configuration - 모든 origin 허용 (외부 접속 지원)
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: true, // 모든 origin 허용
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   });
 
   // Global prefix

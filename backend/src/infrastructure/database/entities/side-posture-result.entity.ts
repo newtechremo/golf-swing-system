@@ -4,7 +4,7 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
-  OneToOne,
+  ManyToOne,
   JoinColumn,
   Index,
 } from 'typeorm';
@@ -18,6 +18,10 @@ export class SidePostureResultEntity {
   @Index()
   @Column({ name: 'posture_analysis_id' })
   postureAnalysisId: number;
+
+  // 좌측/우측 구분
+  @Column({ name: 'side_type', type: 'enum', enum: ['left', 'right'], default: 'left' })
+  sideType: 'left' | 'right';
 
   // 측정 값 (degree)
   @Column({ name: 'round_shoulder_value', type: 'decimal', precision: 10, scale: 3, nullable: true })
@@ -59,7 +63,7 @@ export class SidePostureResultEntity {
   updatedAt: Date;
 
   // Relations
-  @OneToOne(() => BodyPostureAnalysisEntity, (analysis) => analysis.sideResult, {
+  @ManyToOne(() => BodyPostureAnalysisEntity, (analysis) => analysis.sideResults, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'posture_analysis_id' })

@@ -27,6 +27,13 @@ export class UserRepository implements IUserRepository {
     });
   }
 
+  async findByEmail(email: string): Promise<UserEntity | null> {
+    return await this.repository.findOne({
+      where: { email },
+      relations: ['center'],
+    });
+  }
+
   async findByCenterId(centerId: number): Promise<UserEntity[]> {
     return await this.repository.find({
       where: { centerId },
