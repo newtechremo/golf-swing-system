@@ -1,18 +1,14 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios'
 
-// API 포트
-const API_PORT = 3003
-
-// 동적으로 API 기본 URL 생성 (접속한 호스트 사용)
+// 동적으로 API 기본 URL 생성 (리버스 프록시 지원)
 function getApiBaseUrl(): string {
-  // 서버 사이드 렌더링 시 환경변수 사용
+  // 서버 사이드 렌더링 시 환경변수 또는 로컬호스트 사용
   if (typeof window === 'undefined') {
-    return process.env.NEXT_PUBLIC_API_BASE_URL || `http://localhost:${API_PORT}/api`
+    return process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3003/api'
   }
 
-  // 클라이언트 사이드: 현재 접속한 호스트 사용
-  const { protocol, hostname } = window.location
-  return `${protocol}//${hostname}:${API_PORT}/api`
+  // 클라이언트 사이드: 상대 경로 사용 (리버스 프록시 통해 백엔드로 전달)
+  return '/backend-api'
 }
 
 // Axios 인스턴스 생성 (기본 URL은 인터셉터에서 동적으로 설정)
@@ -130,9 +126,8 @@ export function getImageUrl(relativePath: string | null | undefined): string {
   if (relativePath.startsWith('http://') || relativePath.startsWith('https://')) {
     return relativePath
   }
-  // 상대 경로를 API URL로 변환
-  const baseUrl = getApiBaseUrl().replace(/\/api$/, '') // /api 제거
-  return `${baseUrl}/api/body-posture/images/${relativePath}`
+  // 상대 경로를 API URL로 변환 (리버스 프록시 경로 사용)
+  return `/backend-api/body-posture/images/${relativePath}`
 }
 
 export default api
