@@ -1,0 +1,51 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SERVER_PORT || 22 }}
+          script: |
+            cd ${{ secrets.PROJECT_PATH || '~/golf-swing-system' }}
+
+            # Pull latest code
+            git pull origin main
+
+            # Backend build
+            cd backend
+            npm ci --production=false
+            npm run build
+            cd ..
+
+            # Frontend build
+            cd frontend
+            npm ci --production=false
+            npm run build
+            cd ..
+
+            # Create logs directory
+            mkdir -p logs
+
+            # Restart with PM2
+            pm2 startOrRestart ecosystem.config.js --env production
+
+            # Save PM2 process list
+            pm2 save
+
+            echo "Deployment completed successfully!"
