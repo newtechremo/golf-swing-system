@@ -39,11 +39,12 @@ export default function LoginPage() {
 
   return (
     <div className="fixed inset-0 overflow-hidden flex items-center justify-center">
-      {/* 메인 컨테이너 - 높이 기준 이미지 비율 (4:3) */}
+      {/* 메인 컨테이너 - 이미지 비율 (4:3) 유지 */}
       <div
         className="relative h-full w-full"
         style={{
-          maxWidth: 'calc(100vh * 4 / 3)', // 이미지 비율 기준 최대폭
+          maxWidth: 'calc(100vh * 4 / 3)', // 높이 기준 최대폭
+          maxHeight: 'calc(100vw * 3 / 4)', // 너비 기준 최대높이
         }}
       >
         {/* 배경 이미지 - 오른쪽 정렬, 높이 맞춤 */}
