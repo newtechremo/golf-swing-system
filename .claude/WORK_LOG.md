@@ -11,13 +11,16 @@
 
 > ⚠️ **2026-08-26 기준 서비스 장애 상태**
 > 서버 이전(공인 IP `49.168.236.221` → `49.169.8.19`) 후 실행 세팅이 수행되지 않았다.
-> ✅ **Vercel 배포 완료 — 검수 가능** (2026-08-26)
->   **검수 URL: https://parkgolf-ai-pro.vercel.app**
+> ✅ **도메인 전환 완료** (2026-08-26) — https://golf.remo.re.kr 이 Vercel 서비스 중
+>   백엔드 API: https://api-golf.remo.re.kr/api (자체 서버 유지)
+>   ⚠️ **2026-09-09 까지 PM2 golf-frontend + nginx golf vhost 삭제 금지** (롤백 창구)
+> ✅ Vercel 배포 (2026-08-26)
+>   대체 URL: https://parkgolf-ai-pro.vercel.app
 >   백엔드 API: https://api-golf.remo.re.kr/api (health 200, 로그인·대상자·분석결과 검증 완료)
 >   ⚠️ `golf.remo.re.kr` 은 아직 자체 서버 → **실서비스 영향 없음**
 > ✅ GitHub ↔ Vercel 연동 완료 — `git push` 자동배포 동작 (브랜치 `feature/vercel-migration`)
-> ▶ **다음**: 검수 후 ① PR → main 병합 ② 도메인 CNAME 전환
->   ③ 체형분석 이슈(S1-2/S1-6b/S1-9/S1-13) ④ `history/subject/:id` 400 버그
+> ▶ **다음**: ① QA ② 체형분석 REMO 4회 비동기화 ③ 이미지 인증가드+프론트 blob
+>   ④ change-password 엔드포인트 ⑤ puppeteer 제거 판단
 > ✅ golf.remo.re.kr 완전 복구 확인 (2026-08-26)
 >   DNS·MySQL·백엔드·인증서(~11/24)·외부접속 전부 검증 완료
 > ✅ **GitHub Actions `SERVER_HOST`/`PROJECT_PATH` 갱신 완료**
@@ -30,6 +33,56 @@
 ## 작업 이력
 
 ### 2026-08-26
+
+### [2026-08-26] 도메인 전환 완료 — golf.remo.re.kr → Vercel
+
+**개선 작업 2건**
+| ID | 문제 | 원인 | 결과 |
+|----|------|------|------|
+| 1 | 체형분석 uuid 유실 | `frontUuid: null` 등 4개 하드코딩. REMO 는 uuid 를 반환하는데 버리고 있었다 → 재조회 경로(`if status==='pending' && xxxUuid`)가 죽어 있었음 | 4방향 업로드 시 **uuid 4개 저장 + 전부 completed** 확인 |
+| 2 | `history/subject/:id` 400 | **`ParseIntPipe` 가 아니라 전역 `ValidationPipe`** 가 원인. `transform:true` 가 먼저 실행되며 파라미터 타입이 number 면 `transformPrimitive` 가 `+undefined` → **NaN** 으로 바꾼다. 그래서 `optional:true` 로도 통과 불가 | string 으로 받아 직접 파싱 → **파라미터 6종 전부 200**, 이력 20건 조회 |
+
+**🔵 체형분석 leftSide/back — 버그가 아니었음 (이전 보고 정정)**
+- REMO API 를 실제 이미지로 직접 호출한 결과 **front/side/back 3방향 모두 `state:True` + uuid 반환**
+- DB 실측: `left_side_image_url` = `[]` **빈 문자열** → 애초에 업로드되지 않음
+  (앞서 `IS NULL` 로 검사해 빈 문자열을 "있음"으로 오판했다)
+- 4방향 전부 업로드하는 테스트에서 **leftSide·back 모두 completed** → 정상 동작 확인
+- 결론: 원래 안 되던 게 아니라 **사용자가 정면·우측면만 촬영**했던 것
+
+**PR #1 병합**
+https://github.com/newtechremo/golf-swing-system/pull/1 (커밋 6건)
+main 병합 → Vercel 자동배포 45초 내 READY
+
+**도메인 전환 (golf.remo.re.kr → Vercel)**
+1. Vercel 프로젝트에 도메인 추가 (CLI 가 도메인 구매 흐름으로 빠져 **REST API 사용**)
+2. 소유권 검증 TXT — `_vercel.remo.re.kr` 에 **기존 4건 보존하며** golf 1건 추가 (총 5건)
+   ⚠️ UPSERT 는 전체 교체이므로 기존 값을 반드시 함께 넣어야 한다
+3. 검증 통과 → A 레코드 DELETE + CNAME CREATE
+   `A 49.169.8.19` → `CNAME 6ab47e2c9278e9ac.vercel-dns-016.com`
+4. `misconfigured: false` 확인, Let's Encrypt 인증서 자동 발급 (~2026-11-24)
+
+**최종 검증**
+```
+https://golf.remo.re.kr/           → 200
+https://golf.remo.re.kr/login      → 200  (ParkGolf AI Pro 정상 렌더)
+https://golf.remo.re.kr/main       → 200
+번들 api-golf.remo.re.kr 인라인    → ✅
+로그인 (Origin: golf.remo.re.kr)   → ✅ 테스트강사 / 스윙골프센터
+CORS preflight                     → Access-Control-Allow-Origin: https://golf.remo.re.kr
+TLS                                → CN=golf.remo.re.kr, Let's Encrypt, ~2026-11-24
+```
+
+**⚠️ 롤백 창구 — 2026-09-09 까지 유지할 것**
+- PM2 `golf-frontend` (online) 와 nginx `golf.remo.re.kr` vhost 를 **삭제 금지**
+- 문제 발생 시 5분 내 복구:
+```bash
+aws route53 change-resource-record-sets --hosted-zone-id Z0575940EHXG9YRNO7QK --profile remo-aws \
+  --change-batch '{"Changes":[
+    {"Action":"DELETE","ResourceRecordSet":{"Name":"golf.remo.re.kr.","Type":"CNAME","TTL":300,
+      "ResourceRecords":[{"Value":"6ab47e2c9278e9ac.vercel-dns-016.com."}]}},
+    {"Action":"CREATE","ResourceRecordSet":{"Name":"golf.remo.re.kr.","Type":"A","TTL":300,
+      "ResourceRecords":[{"Value":"49.169.8.19"}]}}]}'
+```
 
 ### [2026-08-26] GitHub ↔ Vercel 연동 완료 — git push 자동배포 동작
 
