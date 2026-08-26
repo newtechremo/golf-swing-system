@@ -132,4 +132,35 @@ export function getImageUrl(relativePath: string | null | undefined): string {
   return `${getApiBaseUrl()}/body-posture/images/${relativePath}`
 }
 
+/**
+ * 인증이 필요한 이미지를 blob URL 로 가져온다.
+ *
+ * /body-posture/images/* 에 인증 가드가 걸려 있어 <img src> 로는 불러올 수 없다.
+ * (img 태그는 Authorization 헤더를 보내지 못한다)
+ * axios 로 받아 오면 요청 인터셉터가 토큰을 자동으로 붙여준다.
+ *
+ * 반환된 blob URL 은 호출측에서 URL.revokeObjectURL 로 해제해야 한다.
+ * 해제하지 않으면 페이지를 오갈 때마다 메모리가 누적된다.
+ */
+export async function fetchImageObjectUrl(
+  relativePath: string | null | undefined
+): Promise<string> {
+  if (!relativePath) return ''
+
+  // 이미 절대 URL(S3 등)이면 그대로 쓴다
+  if (relativePath.startsWith('http://') || relativePath.startsWith('https://')) {
+    return relativePath
+  }
+
+  try {
+    const response = await api.get(`/body-posture/images/${relativePath}`, {
+      responseType: 'blob',
+    })
+    return URL.createObjectURL(response.data as Blob)
+  } catch (error) {
+    console.error('이미지 로드 실패:', relativePath, extractApiError(error))
+    return ''
+  }
+}
+
 export default api

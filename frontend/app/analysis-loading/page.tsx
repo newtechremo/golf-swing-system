@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Loader2, AlertCircle, ArrowLeft } from 'lucide-react'
+import { Loader2, AlertCircle, ArrowLeft, RefreshCw } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   refreshGolfSwingAnalysis,
@@ -23,6 +23,7 @@ export default function AnalysisLoadingPage() {
   const [status, setStatus] = useState<AnalysisStatus>('pending')
   const [error, setError] = useState<string | null>(null)
   const [pollCount, setPollCount] = useState(0)
+  const [isRetrying, setIsRetrying] = useState(false)
 
   const steps: Record<AnalysisStatus | 'checking', string> = {
     pending: '분석 대기 중...',
@@ -106,6 +107,26 @@ export default function AnalysisLoadingPage() {
     }
   }, [analysisId, memberId, router, pollCount, steps])
 
+  /**
+   * 에러 상태에서 수동 재시도.
+   *
+   * 백그라운드 REMO 요청 중 서버가 재시작되면 status 가 pending 으로 남고
+   * 자동 폴링은 이미 종료된 상태다. 이때 사용자가 직접 상태를 다시 확인할 수 있게 한다.
+   * 폴링 카운터도 초기화해 자동 폴링이 다시 돌게 한다.
+   */
+  const handleRetry = useCallback(async () => {
+    setIsRetrying(true)
+    setError(null)
+    setPollCount(0)
+    setProgress(0)
+    setCurrentStep('분석 상태 확인 중...')
+    try {
+      await pollAnalysisStatus()
+    } finally {
+      setIsRetrying(false)
+    }
+  }, [pollAnalysisStatus])
+
   useEffect(() => {
     if (!analysisId) {
       setError('분석 ID가 없습니다. 이전 페이지로 돌아가주세요.')
@@ -136,8 +157,8 @@ export default function AnalysisLoadingPage() {
     router.push(`/member/${memberId}`)
   }
 
-  const handleRetry = () => {
-    // 다시 업로드 페이지로
+  /** 재촬영 — 업로드 페이지로 되돌린다 */
+  const handleReupload = () => {
     router.push(`/upload-video?memberId=${memberId}&swingType=full`)
   }
 
@@ -166,10 +187,47 @@ export default function AnalysisLoadingPage() {
 
           {/* Error Alert */}
           {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
+            <div className="space-y-3">
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+
+              {/*
+                에러 상태에서 아무것도 할 수 없으면 막다른 화면이 된다.
+                - 재시도: 폴링 카운터를 초기화하고 다시 조회한다.
+                  백그라운드 REMO 요청 중 서버가 재시작되면 status 가 pending 으로
+                  남는데, 이때 재시도로 상태를 다시 확인할 수 있다.
+                - 회원 정보로: 분석이 확정 실패(failed)면 재촬영이 필요하다.
+              */}
+              <div className="flex gap-2">
+                {status === 'failed' ? (
+                  // 확정 실패 — REMO 가 스윙 구간을 인식하지 못한 경우다. 재촬영이 필요하다.
+                  <Button variant="outline" className="flex-1" onClick={handleReupload}>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    다시 촬영
+                  </Button>
+                ) : (
+                  // pending 잔류 / 폴링 타임아웃 — 상태만 다시 확인하면 된다.
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={handleRetry}
+                    disabled={isRetrying}
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${isRetrying ? 'animate-spin' : ''}`} />
+                    {isRetrying ? '확인 중...' : '다시 확인'}
+                  </Button>
+                )}
+                <Button
+                  variant="secondary"
+                  className="flex-1"
+                  onClick={() => router.push(memberId ? `/member/${memberId}` : '/main')}
+                >
+                  회원 정보로
+                </Button>
+              </div>
+            </div>
           )}
 
           {/* Progress Bar */}

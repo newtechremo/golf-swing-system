@@ -30,6 +30,7 @@ import { BodyPostureAnalysisRepository } from './infrastructure/database/reposit
 import { LoginUserUseCase } from './application/use-cases/auth/LoginUserUseCase';
 import { RefreshTokenUseCase } from './application/use-cases/auth/RefreshTokenUseCase';
 import { RegisterUserUseCase } from './application/use-cases/auth/RegisterUserUseCase';
+import { ChangePasswordUseCase } from './application/use-cases/auth/ChangePasswordUseCase';
 
 // Use Cases - Subject
 import { CreateSubjectUseCase } from './application/use-cases/subject/CreateSubjectUseCase';
@@ -178,6 +179,7 @@ import { GolfSwingScoreService } from './infrastructure/services/golf-swing-scor
     LoginUserUseCase,
     RefreshTokenUseCase,
     RegisterUserUseCase,
+    ChangePasswordUseCase,
 
     // Use Cases - Subject
     CreateSubjectUseCase,

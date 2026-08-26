@@ -7,9 +7,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Home, Target, Download, Share2, User, Calendar, Loader2 } from "lucide-react"
 import Image from "next/image"
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { getSubjectDetail, type SubjectDetail, getGenderLabel, calculateAge } from "@/lib/subjects"
-import api, { getImageUrl } from "@/lib/api"
+import api, { fetchImageObjectUrl } from "@/lib/api"
 
 type AnalysisItem = {
   label: string
@@ -202,6 +202,9 @@ export default function BodyAnalysisResultPage() {
   const [member, setMember] = useState<SubjectDetail | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [analysisData, setAnalysisData] = useState<AnalysisApiResponse | null>(null)
+  // 생성한 blob URL 을 추적해 해제한다
+  const blobUrlsRef = useRef<string[]>([])
+
   const [photos, setPhotos] = useState({
     front: "",
     leftSide: "",
@@ -213,7 +216,10 @@ export default function BodyAnalysisResultPage() {
   const [memo, setMemo] = useState("")
 
   // API에서 분석 데이터를 분석 섹션으로 변환하는 함수
-  const convertApiDataToSections = useCallback((data: AnalysisApiResponse): AnalysisSection[] => {
+  const convertApiDataToSections = useCallback((
+    data: AnalysisApiResponse,
+    imageUrls: Record<string, string>,
+  ): AnalysisSection[] => {
     const sections: AnalysisSection[] = []
 
     // 정면 결과
@@ -222,7 +228,7 @@ export default function BodyAnalysisResultPage() {
       sections.push({
         id: "front",
         title: "1. 정면 사진 분석 결과",
-        imageUrl: getImageUrl(data.images.front.url) || "/body-front-analysis-with-skeleton-overlay.jpg",
+        imageUrl: imageUrls.front || "/body-front-analysis-with-skeleton-overlay.jpg",
         items: [
           { label: "전신 좌우 기울기", value: front.bodyTiltValue, rangeType: "left-right", status: gradeToStatus(front.bodyTiltGrade) },
           { label: "머리 좌우 기울기", value: front.headBalanceValue, rangeType: "left-right", status: gradeToStatus(front.headBalanceGrade) },
@@ -241,7 +247,7 @@ export default function BodyAnalysisResultPage() {
       sections.push({
         id: "leftSide",
         title: "2. 좌측면 사진 분석 결과",
-        imageUrl: getImageUrl(data.images.leftSide.url) || "/body-side-analysis-with-posture-lines.jpg",
+        imageUrl: imageUrls.leftSide || "/body-side-analysis-with-posture-lines.jpg",
         items: [
           { label: "거북목 검사", value: side.turtleNeckValue, rangeType: "posture-grade", status: postureGradeToStatus(side.turtleNeckGrade) },
           { label: "라운드 숄더", value: side.roundShoulderValue, rangeType: "posture-grade", status: postureGradeToStatus(side.roundShoulderGrade) },
@@ -257,7 +263,7 @@ export default function BodyAnalysisResultPage() {
       sections.push({
         id: "rightSide",
         title: "3. 우측면 사진 분석 결과",
-        imageUrl: getImageUrl(data.images.rightSide.url) || "/body-side-analysis-with-posture-lines.jpg",
+        imageUrl: imageUrls.rightSide || "/body-side-analysis-with-posture-lines.jpg",
         items: [
           { label: "거북목 검사", value: side.turtleNeckValue, rangeType: "posture-grade", status: postureGradeToStatus(side.turtleNeckGrade) },
           { label: "라운드 숄더", value: side.roundShoulderValue, rangeType: "posture-grade", status: postureGradeToStatus(side.roundShoulderGrade) },
@@ -273,7 +279,7 @@ export default function BodyAnalysisResultPage() {
       sections.push({
         id: "back",
         title: "4. 후면 사진 분석 결과",
-        imageUrl: getImageUrl(data.images.back.url) || "/body-front-analysis-with-skeleton-overlay.jpg",
+        imageUrl: imageUrls.back || "/body-front-analysis-with-skeleton-overlay.jpg",
         items: [
           { label: "전신 좌우 기울기", value: back.bodyTiltValue, rangeType: "left-right", status: gradeToStatus(back.bodyTiltGrade) },
           { label: "머리 좌우 기울기", value: back.headBalanceValue, rangeType: "left-right", status: gradeToStatus(back.headBalanceGrade) },
@@ -287,6 +293,14 @@ export default function BodyAnalysisResultPage() {
     return sections
   }, [])
 
+  // 언마운트 시 blob URL 해제
+  useEffect(() => {
+    return () => {
+      blobUrlsRef.current.forEach((u) => URL.revokeObjectURL(u))
+      blobUrlsRef.current = []
+    }
+  }, [])
+
   // 분석 데이터 로드
   const loadAnalysisData = useCallback(async () => {
     if (!analysisId) return
@@ -296,16 +310,24 @@ export default function BodyAnalysisResultPage() {
       const data = response.data
       setAnalysisData(data)
 
-      // 이미지 URL 설정 (상대 경로를 API URL로 변환)
-      setPhotos({
-        front: getImageUrl(data.images.front.url),
-        leftSide: getImageUrl(data.images.leftSide.url),
-        rightSide: getImageUrl(data.images.rightSide.url),
-        back: getImageUrl(data.images.back.url),
-      })
+      // 이미지는 인증이 필요하므로 blob 으로 받아온다.
+      // (img 태그는 Authorization 헤더를 보내지 못한다)
+      const keys = ['front', 'leftSide', 'rightSide', 'back'] as const
+      const loaded = await Promise.all(
+        keys.map((k) => fetchImageObjectUrl(data.images[k]?.url))
+      )
+      const imageUrls = Object.fromEntries(
+        keys.map((k, i) => [k, loaded[i]])
+      ) as Record<(typeof keys)[number], string>
+
+      // 이전 blob 해제 후 교체 (재조회 시 메모리 누수 방지)
+      blobUrlsRef.current.forEach((u) => URL.revokeObjectURL(u))
+      blobUrlsRef.current = loaded.filter((u) => u.startsWith('blob:'))
+
+      setPhotos(imageUrls)
 
       // 분석 결과를 섹션으로 변환
-      const sections = convertApiDataToSections(data)
+      const sections = convertApiDataToSections(data, imageUrls)
       setAnalysisResults(sections)
 
       // 메모 설정

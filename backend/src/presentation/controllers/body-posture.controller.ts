@@ -14,6 +14,7 @@ import {
   ParseIntPipe,
   BadRequestException,
   NotFoundException,
+  ForbiddenException,
   HttpCode,
   HttpStatus,
   Inject,
@@ -298,11 +299,34 @@ export class BodyPostureController {
         })());
       }
 
-      await Promise.all(apiPromises);
-      this.logger.log('REMO API 분석 완료');
+      // allSettled 를 쓴다. Promise.all 이면 한 방향 실패가 전체를 400 으로 만들어
+      // 이미 성공한 방향의 결과까지 버려진다.
+      // 각 방향은 독립적이므로 부분 성공을 그대로 저장하는 편이 낫다.
+      const settled = await Promise.allSettled(apiPromises);
+      const failed = settled.filter((r) => r.status === 'rejected');
+
+      failed.forEach((r) =>
+        this.logger.error(
+          `REMO API 부분 실패: ${(r as PromiseRejectedResult).reason?.message}`,
+        ),
+      );
+
+      // 전부 실패한 경우에만 요청을 실패로 처리한다
+      if (failed.length === settled.length && settled.length > 0) {
+        const reason = (failed[0] as PromiseRejectedResult).reason;
+        throw new BadRequestException({
+          message: reason?.message || '체형분석 API 호출에 실패했습니다.',
+          error: 'REMO API Error',
+          statusCode: 400,
+        });
+      }
+
+      this.logger.log(
+        `REMO API 분석 완료 (성공 ${settled.length - failed.length}/${settled.length})`,
+      );
     } catch (error) {
+      if (error instanceof BadRequestException) throw error;
       this.logger.error('REMO API 호출 실패:', error.message);
-      // REMO API 오류 메시지를 그대로 전달 (사람 미감지 등)
       throw new BadRequestException({
         message: error.message || '체형분석 API 호출에 실패했습니다.',
         error: 'REMO API Error',
@@ -431,12 +455,25 @@ export class BodyPostureController {
    * GET /body-posture/images/*
    */
   @Get('images/*')
+  @UseGuards(JwtAuthGuard)
   async getImage(@Request() req, @Response() res, @Param() params: any) {
     // 와일드카드 경로 추출
     const imagePath = params['0'] || params[0] || '';
 
     if (!imagePath) {
       throw new NotFoundException('이미지 경로가 필요합니다.');
+    }
+
+    // 소유권 검증.
+    // 저장 경로 규약은 `{folder}/{userId}/{file}` 또는
+    // `results/{folder}/{userId}/{file}` 이다 (local-storage.service.ts 참조).
+    // 이것이 없으면 로그인만 하면 타 강사의 대상자 체형 사진을 볼 수 있다.
+    const segments = imagePath.split('/').filter(Boolean);
+    const ownerIdx = segments[0] === 'results' ? 2 : 1;
+    const ownerId = Number(segments[ownerIdx]);
+
+    if (!Number.isInteger(ownerId) || ownerId !== req.user.sub) {
+      throw new ForbiddenException('접근 권한이 없습니다.');
     }
 
     const file = await this.localStorageService.getFile(imagePath);
