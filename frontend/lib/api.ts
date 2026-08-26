@@ -1,14 +1,16 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios'
 
-// 동적으로 API 기본 URL 생성 (리버스 프록시 지원)
+// API 기본 URL
+//
+// Vercel 이전 후 프론트(Vercel)와 백엔드(자체 서버)가 다른 호스트에 있으므로
+// 상대경로가 아니라 절대 URL 을 사용한다.
+//   프로덕션 : NEXT_PUBLIC_API_BASE_URL = https://api-golf.remo.re.kr/api
+//   로컬개발 : 값을 비워두면 '/backend-api' → next.config.mjs 의 rewrites 로 프록시
+//
+// 주의: NEXT_PUBLIC_* 은 빌드 시점에 클라이언트 번들로 인라인된다.
+//       Vercel 에서 값만 바꿔도 재배포하지 않으면 반영되지 않는다.
 function getApiBaseUrl(): string {
-  // 서버 사이드 렌더링 시 환경변수 또는 로컬호스트 사용
-  if (typeof window === 'undefined') {
-    return process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3003/api'
-  }
-
-  // 클라이언트 사이드: 상대 경로 사용 (리버스 프록시 통해 백엔드로 전달)
-  return '/backend-api'
+  return process.env.NEXT_PUBLIC_API_BASE_URL || '/backend-api'
 }
 
 // Axios 인스턴스 생성 (기본 URL은 인터셉터에서 동적으로 설정)
@@ -126,8 +128,8 @@ export function getImageUrl(relativePath: string | null | undefined): string {
   if (relativePath.startsWith('http://') || relativePath.startsWith('https://')) {
     return relativePath
   }
-  // 상대 경로를 API URL로 변환 (리버스 프록시 경로 사용)
-  return `/backend-api/body-posture/images/${relativePath}`
+  // 상대 경로를 API URL로 변환
+  return `${getApiBaseUrl()}/body-posture/images/${relativePath}`
 }
 
 export default api

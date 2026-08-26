@@ -106,7 +106,7 @@ export async function uploadGolfSwingVideo(
       headers: {
         'Content-Type': 'multipart/form-data',
       },
-      timeout: 300000, // 5분 타임아웃 (최대 500MB 비디오 업로드)
+      timeout: 180000, // 3분 (100MB 업로드 + 즉시응답)
     })
 
     return response.data

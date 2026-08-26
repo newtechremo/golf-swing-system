@@ -1,6 +1,6 @@
 # Dependencies
 node_modules/
-package-lock.json
+# package-lock.json 은 재현 가능한 빌드를 위해 반드시 추적한다 (Vercel 빌드 필수)
 
 # Environment variables
 .env
@@ -75,7 +75,6 @@ frontend/dist/
 frontend/.next/
 frontend/.env*
 frontend/*.log
-frontend/pnpm-lock.yaml
 
 # Zip files and archives
 *.zip
@@ -93,3 +92,11 @@ backend/results/
 
 # Claude settings with secrets
 .claude/settings.local.json
+
+# Database dumps (실데이터 - bcrypt 해시/개인정보 포함, 절대 커밋 금지)
+golf_swing_db_dump.sql
+*_db_dump.sql
+*_dump.sql
+
+# OMC 도구 상태
+.omc/
