@@ -19,8 +19,8 @@
 >   백엔드 API: https://api-golf.remo.re.kr/api (health 200, 로그인·대상자·분석결과 검증 완료)
 >   ⚠️ `golf.remo.re.kr` 은 아직 자체 서버 → **실서비스 영향 없음**
 > ✅ GitHub ↔ Vercel 연동 완료 — `git push` 자동배포 동작 (브랜치 `feature/vercel-migration`)
-> ▶ **다음**: ① QA ② 체형분석 REMO 4회 비동기화 ③ 이미지 인증가드+프론트 blob
->   ④ change-password 엔드포인트 ⑤ puppeteer 제거 판단
+> ✅ **잔여 개선 완료** — change-password / 이미지 보안 / 재시도 UI / allSettled
+> ▶ **다음**: ① QA ② puppeteer 제거 여부 판단(Chromium 563MB) ③ DB 마이그레이션 도입
 > ✅ golf.remo.re.kr 완전 복구 확인 (2026-08-26)
 >   DNS·MySQL·백엔드·인증서(~11/24)·외부접속 전부 검증 완료
 > ✅ **GitHub Actions `SERVER_HOST`/`PROJECT_PATH` 갱신 완료**
@@ -33,6 +33,68 @@
 ## 작업 이력
 
 ### 2026-08-26
+
+### [2026-08-26] 잔여 개선 작업 완료 (비밀번호 변경 / 이미지 보안 / 재시도 UI)
+
+**🔵 체형분석 비동기화는 불필요 — 실측으로 확인**
+REMO 체형분석 API 단일 호출 실측: **0.406 / 0.413 / 0.430초** (3회 평균 0.42초)
+4방향 병렬이면 1초 미만. 골프 스윙(접수 후 30~60초 분석 + 폴링)과 달리
+**결과를 즉시 반환하는 동기 API** 다(응답에 far_coords 등 15개 필드 포함).
+→ 비동기화하면 불필요한 상태 관리만 늘어난다. **동기 유지 결정, 작업목록에서 제외.**
+
+**① change-password 엔드포인트 구현**
+프론트(`lib/auth.ts:116`)가 호출하는데 백엔드에 없어 항상 404 였다.
+- `ChangePasswordDto` / `ChangePasswordUseCase` 신규
+- 현재 비밀번호 bcrypt 검증 → 동일 비밀번호 차단 → 새 해시 저장(라운드 10)
+- 검증 전 케이스 통과:
+```
+미인증 401 / 현재비번오류 401 / 6자미만 400 / 동일비번 400
+정상변경 200 → 새 비번 로그인 200, 옛 비번 401 → 원복 200
+```
+
+**② 이미지 엔드포인트 보안 (백엔드 + 프론트 동시 적용)**
+- `GET /body-posture/images/*` 만 가드가 빠져 있었다.
+  경로만 알면 **누구나 대상자의 체형 사진 조회 가능**했다(신체 촬영 이미지).
+- `JwtAuthGuard` + **소유권 검증** 추가.
+  경로 규약 `{folder}/{userId}/{file}` 에서 userId 추출 → `req.user.sub` 비교.
+  가드만으로는 로그인한 타 강사가 볼 수 있다.
+- ⚠️ `<img src>` 는 Authorization 헤더를 못 보내므로 가드만 붙이면 이미지가 전멸한다.
+  **같은 커밋에서 프론트를 blob 방식으로 전환**:
+  `axios responseType:'blob'` → `URL.createObjectURL` → `<img src="blob:...">`
+  `blobUrlsRef` 로 추적해 재조회/언마운트 시 `revokeObjectURL` (메모리 누수 방지)
+- 검증:
+```
+미인증 401 / 본인소유 200 / 타인소유(userId=9) 403 / 경로탐색 403
+```
+
+**③ 분석 대기 화면 재시도 UI**
+에러 시 아무 조작도 못 하는 막다른 화면이었다. status 별로 버튼을 분기:
+| status | 버튼 | 동작 |
+|--------|------|------|
+| `failed` | 다시 촬영 | REMO 가 스윙 구간 인식 실패 → 재업로드 페이지 |
+| `pending` 잔류 / 폴링 타임아웃 | 다시 확인 | 폴링 카운터 초기화 후 재조회 |
+| 공통 | 회원 정보로 | 회원 상세로 복귀 |
+
+기존 `handleRetry`(재업로드용)와 이름이 충돌해 `handleReupload` 로 분리.
+
+**④ 체형분석 부분 실패 허용**
+`Promise.all` 은 한 방향 실패가 전체를 400 으로 만들어 **이미 성공한 방향의 결과까지 버렸다.**
+`allSettled` 로 전환 — 부분 성공을 저장하고 전부 실패한 경우에만 요청 실패 처리.
+
+**배포**
+`62f447a` main 푸시 → Vercel 자동배포 15초 내 READY
+```
+https://golf.remo.re.kr/                     → 200
+https://golf.remo.re.kr/login                → 200
+https://golf.remo.re.kr/password             → 200
+https://golf.remo.re.kr/body-analysis-result → 200
+회귀검증: health / subjects / history / golf-swing/analysis 전부 200
+```
+
+**puppeteer 판단 보류 (제품 결정 필요)**
+`PdfGenerationService` 는 `app.module.ts` 등록 외 **사용처 0건**.
+`node_modules/puppeteer-core` 13MB + **Chromium 캐시 563MB**.
+PDF 리포트 기능 계획이 없다면 제거 대상. 계획이 있으면 유지.
 
 ### [2026-08-26] 도메인 전환 완료 — golf.remo.re.kr → Vercel
 
