@@ -58,6 +58,7 @@ import { SubjectController } from './presentation/controllers/subject.controller
 import { GolfSwingController } from './presentation/controllers/golf-swing.controller';
 import { BodyPostureController } from './presentation/controllers/body-posture.controller';
 import { HistoryController } from './presentation/controllers/history.controller';
+import { HealthController } from './presentation/controllers/health.controller';
 
 // Guards
 import { JwtAuthGuard } from './presentation/guards/jwt-auth.guard';
@@ -106,8 +107,6 @@ import { GolfSwingScoreService } from './infrastructure/services/golf-swing-scor
           NoticeEntity,
           NoticeReadEntity,
         ],
-        // WARNING: dropSchema will delete all data! Remove after first run.
-        dropSchema: configService.get('DB_DROP_SCHEMA') === 'true',
         synchronize: configService.get('NODE_ENV') !== 'production',
         logging: ['error'],
       }),
@@ -149,6 +148,7 @@ import { GolfSwingScoreService } from './infrastructure/services/golf-swing-scor
     ScheduleModule.forRoot(),
   ],
   controllers: [
+    HealthController,
     AuthController,
     SubjectController,
     GolfSwingController,

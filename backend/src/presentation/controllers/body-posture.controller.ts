@@ -325,10 +325,14 @@ export class BodyPostureController {
         backUrl: '',
       },
       {
-        frontUuid: null,
-        leftSideUuid: null,
-        rightSideUuid: null,
-        backUuid: null,
+        // REMO 응답의 uuid 를 저장한다.
+        // null 로 두면 getAnalysis 의 재조회 경로가
+        // `if (status === 'pending' && analysis.xxxUuid)` 조건에서 막혀
+        // 결과를 영영 다시 가져올 수 없다.
+        frontUuid: analysisResults.front?.uuid ?? null,
+        leftSideUuid: analysisResults.leftSide?.uuid ?? null,
+        rightSideUuid: analysisResults.rightSide?.uuid ?? null,
+        backUuid: analysisResults.back?.uuid ?? null,
       },
       {
         frontStatus: analysisResults.front ? 'completed' : 'pending',

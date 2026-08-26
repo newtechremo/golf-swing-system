@@ -1,6 +1,7 @@
 # Claude 작업 규칙
 
 > **중요**: 모든 작업 시 이 규칙을 따릅니다.
+> **서비스명**: ParkGolf AI Pro — 파크골프 전문가 AI 분석 서비스 (일반 골프 아님)
 
 ---
 
@@ -61,9 +62,10 @@
 
 ### 테스트 계정
 ```
-Email: instructor001@golf.com
-Password: Test1234!
+Email: test@example.com          # username 은 instructor001 (id=1, 테스트강사)
+Password: Test1234!              # 2026-08-26 재설정
 ```
+> 이전 문서의 `instructor001@golf.com` 은 DB 에 존재하지 않는 값이었음 (2026-08-26 정정)
 
 ### 기술 스택
 - **Backend**: NestJS + TypeORM + MySQL
@@ -96,6 +98,9 @@ golf_swing_system/
 
 ## 6. 미해결 이슈 요약
 
+> ⚠️ 아래 9건은 **2025-12-11 기준**이다. 백엔드가 2026-06-15~08-26 동안 중단되어 있었으므로
+> **현재도 유효한지 E2E 재현으로 재판정이 필요**하다. 상세 분석·작업플랜은 `docs/` 참조.
+
 ### Critical (1개)
 - **C-01**: 체형 분석 이미지 필드 부족 (0/3 → 3개 필요)
 
@@ -121,7 +126,7 @@ npm run build && npm run start:dev
 ### 프론트엔드
 ```bash
 cd frontend
-pnpm dev
+npm run dev          # package-lock.json 사용 — npm 으로 통일 (2026-08-26)
 ```
 
 ### 포트 충돌 해결

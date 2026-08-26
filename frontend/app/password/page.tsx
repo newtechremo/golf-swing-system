@@ -26,7 +26,7 @@ export default function PasswordPage() {
     }
   }, [router])
 
-  const handleChangePassword = (e: React.FormEvent) => {
+  const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
     setSuccess(false)
@@ -41,7 +41,8 @@ export default function PasswordPage() {
       return
     }
 
-    const result = changePassword(currentPassword, newPassword)
+    // await 누락 시 Promise 객체가 항상 truthy 라 실패해도 성공으로 표시된다
+    const result = await changePassword(currentPassword, newPassword)
     if (result) {
       setSuccess(true)
       setCurrentPassword("")

@@ -22,6 +22,13 @@ export class JwtAuthGuard implements CanActivate {
 
     try {
       const payload = this.jwtService.verify(token);
+
+      // access 토큰만 허용한다.
+      // refresh 토큰으로 보호 API 를 호출하는 경로를 차단한다.
+      if (payload.type !== 'access') {
+        throw new UnauthorizedException('유효하지 않은 토큰입니다.');
+      }
+
       request.user = payload;
       return true;
     } catch (error) {
