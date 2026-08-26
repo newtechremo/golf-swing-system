@@ -8,7 +8,12 @@ module.exports = {
       exec_mode: 'fork',
       autorestart: true,
       watch: false,
-      max_memory_restart: '1G',
+      max_memory_restart: '2G',   // 비동기화로 동시 업로드 증가. 100MB×3 ≈ 700MB 피크
+      // 크래시 폭주 방지 (2026-08-26): DB 장애 시 49,368회 재시작 + 로그 954MB 누적 사고 재발 방지
+      // 10초 이상 살아야 정상 기동으로 인정, 연속 15회 실패 시 errored 로 정지
+      min_uptime: 10000,
+      max_restarts: 15,
+      restart_delay: 5000,
       env: {
         NODE_ENV: 'production',
         PORT: 3003
@@ -30,7 +35,12 @@ module.exports = {
       exec_mode: 'fork',
       autorestart: true,
       watch: false,
-      max_memory_restart: '1G',
+      max_memory_restart: '2G',   // 비동기화로 동시 업로드 증가. 100MB×3 ≈ 700MB 피크
+      // 크래시 폭주 방지 (2026-08-26): DB 장애 시 49,368회 재시작 + 로그 954MB 누적 사고 재발 방지
+      // 10초 이상 살아야 정상 기동으로 인정, 연속 15회 실패 시 errored 로 정지
+      min_uptime: 10000,
+      max_restarts: 15,
+      restart_delay: 5000,
       env: {
         NODE_ENV: 'production',
         PORT: 3000
