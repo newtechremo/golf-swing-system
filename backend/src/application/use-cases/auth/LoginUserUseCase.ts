@@ -83,14 +83,20 @@ export class LoginUserUseCase {
     accessToken: string;
     refreshToken: string;
   } {
-    const payload = { sub: userId, role: 'instructor' };
+    const base = { sub: userId, role: 'instructor' };
 
-    const accessToken = this.jwtService.sign(payload, { expiresIn: '1h' });
-    const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
-
+    // type 클레임으로 토큰 용도를 구분한다.
+    // 이것이 없으면 refreshToken 을 Bearer 로 보내는 것만으로
+    // 7일짜리 액세스 권한이 되어 Refresh Token 의 존재 이유가 무력화된다.
     return {
-      accessToken,
-      refreshToken,
+      accessToken: this.jwtService.sign(
+        { ...base, type: 'access' },
+        { expiresIn: '1h' },
+      ),
+      refreshToken: this.jwtService.sign(
+        { ...base, type: 'refresh' },
+        { expiresIn: '7d' },
+      ),
     };
   }
 }

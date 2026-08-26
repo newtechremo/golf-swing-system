@@ -100,7 +100,7 @@ export class RemoApiService {
   private readonly retryDelay = 1000;
 
   constructor(private readonly configService: ConfigService) {
-    this.baseUrl = this.configService.get('REMO_API_URL', 'http://api.remo.re.kr');
+    this.baseUrl = this.configService.get('REMO_API_URL', 'https://api.remo.re.kr');
     const apiKey = this.configService.get('REMO_API_KEY');
     const userEmail = this.configService.get('REMO_API_EMAIL');
     const userKey = this.configService.get('REMO_API_USER_KEY');
@@ -472,17 +472,21 @@ export class RemoApiService {
     const headers = {
       'Content-Type': 'application/json',
     };
+    // timeout 미설정 시 REMO 무응답에 무기한 대기한다.
+    // shouldRetry 는 hang 상태를 감지하지 못해 재시도조차 걸리지 않는다.
+    const config = { headers, timeout: 180000 };
 
     try {
       if (method === 'GET') {
-        return await axios.get(url, { headers });
+        return await axios.get(url, config);
       } else {
-        return await axios.post(url, data, { headers });
+        return await axios.post(url, data, config);
       }
     } catch (error) {
       if (this.shouldRetry(error) && attempt < this.maxRetries) {
         this.logger.warn(`Request failed, retrying (${attempt}/${this.maxRetries}): ${error.message}`);
-        await this.delay(this.retryDelay * attempt);
+        // 선형 → 지수 백오프 (1s, 2s, 4s)
+        await this.delay(this.retryDelay * Math.pow(2, attempt - 1));
         return this.makeRequestWithRetry(method, url, data, attempt + 1);
       }
       throw error;

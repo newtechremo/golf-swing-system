@@ -222,14 +222,25 @@ export class LocalStorageService {
    */
   async getFile(relativePath: string): Promise<{ buffer: Buffer; mimeType: string } | null> {
     try {
-      let absolutePath: string;
-
       // results/ 접두사가 있으면 resultsDir 사용, 없으면 uploadDir 사용
-      if (relativePath.startsWith('results/') || relativePath.startsWith('results\\')) {
-        const cleanPath = relativePath.replace(/^results[\/\\]/, '');
-        absolutePath = path.join(this.resultsDir, cleanPath);
-      } else {
-        absolutePath = path.join(this.uploadDir, relativePath);
+      const isResult = /^results[\/\\]/.test(relativePath);
+      const baseDir = isResult ? this.resultsDir : this.uploadDir;
+      const rel = isResult
+        ? relativePath.replace(/^results[\/\\]/, '')
+        : relativePath;
+
+      // path.join 은 '..' 를 해석해 상위 디렉터리로 이동시킨다(차단하지 않는다).
+      // resolve 후 baseDir 접두사를 검증해 봉쇄한다.
+      // 이 검증이 없으면 ../.env 로 JWT_SECRET/DB비번/AWS키가 노출될 수 있다.
+      const absolutePath = path.resolve(baseDir, rel);
+      const baseResolved = path.resolve(baseDir);
+
+      if (
+        absolutePath !== baseResolved &&
+        !absolutePath.startsWith(baseResolved + path.sep)
+      ) {
+        this.logger.warn(`Path traversal blocked: ${relativePath}`);
+        return null;
       }
 
       if (!fs.existsSync(absolutePath)) {
@@ -237,8 +248,7 @@ export class LocalStorageService {
         return null;
       }
 
-      const buffer = await fs.promises.readFile(absolutePath);
-      const ext = path.extname(relativePath).toLowerCase();
+      const ext = path.extname(absolutePath).toLowerCase();
 
       const mimeTypes: Record<string, string> = {
         '.jpg': 'image/jpeg',
@@ -250,9 +260,16 @@ export class LocalStorageService {
         '.mov': 'video/quicktime',
       };
 
+      // 화이트리스트. 폴백(application/octet-stream)을 두면
+      // 이미지가 아닌 임의 파일도 그대로 응답된다.
+      if (!mimeTypes[ext]) {
+        this.logger.warn(`Disallowed file type requested: ${ext}`);
+        return null;
+      }
+
       return {
-        buffer,
-        mimeType: mimeTypes[ext] || 'application/octet-stream',
+        buffer: await fs.promises.readFile(absolutePath),
+        mimeType: mimeTypes[ext],
       };
     } catch (error) {
       this.logger.error(`Failed to read file ${relativePath}: ${error.message}`);

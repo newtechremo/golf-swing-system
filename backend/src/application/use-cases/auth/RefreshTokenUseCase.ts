@@ -14,9 +14,14 @@ export class RefreshTokenUseCase {
       // Refresh Token 검증
       const payload = this.jwtService.verify(refreshToken);
 
+      // refresh 토큰만 허용한다. accessToken 으로 무한 갱신하는 경로를 차단한다.
+      if (payload.type !== 'refresh') {
+        throw new UnauthorizedException('유효하지 않은 Refresh Token입니다.');
+      }
+
       // 새로운 Access Token 생성
       const newAccessToken = this.jwtService.sign(
-        { sub: payload.sub, role: payload.role },
+        { sub: payload.sub, role: payload.role, type: 'access' },
         { expiresIn: '1h' },
       );
 

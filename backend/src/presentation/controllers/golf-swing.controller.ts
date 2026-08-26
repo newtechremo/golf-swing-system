@@ -61,7 +61,9 @@ export class GolfSwingController {
     FileInterceptor('video', {
       storage: memoryStorage(),
       limits: {
-        fileSize: 500 * 1024 * 1024, // 500MB for video
+        // nginx client_max_body_size 와 일치시킨다.
+        // memoryStorage 라 base64(x4/3) + 직렬화까지 피크 약 370MB.
+        fileSize: 100 * 1024 * 1024, // 100MB
       },
     }),
   )
@@ -98,37 +100,61 @@ export class GolfSwingController {
       height,
     );
 
-    // REMO API 호출하여 분석 시작
-    try {
-      this.logger.log(`REMO API 골프 분석 요청: uuid=${result.uuid}, video size=${file.buffer.length} bytes`);
-
-      const remoResult = await this.remoApiService.requestGolfSwingAnalysis(
-        file.buffer,   // Video buffer (base64 encoding용)
-        result.uuid,   // 우리가 생성한 UUID
-        height || '175',
-      );
-
-      // 분석 요청 성공 - 상태를 processing으로 업데이트
-      await this.analysisRepository.update(result.analysisId, {
-        status: 'processing',
-        waitTime: remoResult.waitTime,
-        creditUsed: remoResult.credit,
-      });
-
-      this.logger.log(`REMO API 분석 요청 성공: uuid=${result.uuid}, waitTime=${remoResult.waitTime}s`);
-    } catch (error) {
-      // REMO API 실패 시 상태를 failed로 업데이트
-      this.logger.error('REMO API 호출 실패:', error.message);
-      await this.analysisRepository.update(result.analysisId, {
-        status: 'failed',
-      });
-    }
+    // REMO 요청은 응답에 필요 없다. 클라이언트는 analysisId 로 폴링한다
+    // (frontend/lib/golf-swing.ts 의 pollGolfSwingAnalysis).
+    // await 하면 30~60초를 붙잡아 nginx 타임아웃에 요청이 잘린다.
+    void this.startRemoAnalysis(
+      result.analysisId,
+      result.uuid,
+      file.buffer,
+      height,
+    );
 
     return {
       message: '골프 스윙 분석이 시작되었습니다.',
       analysisId: result.analysisId,
       uuid: result.uuid,
     };
+  }
+
+  /**
+   * REMO 분석 요청을 백그라운드로 수행한다.
+   * 응답 이후에 실행되므로 절대 throw 하지 않는다. 실패는 DB status 로만 전달된다.
+   */
+  private async startRemoAnalysis(
+    analysisId: number,
+    uuid: string,
+    videoBuffer: Buffer,
+    height?: string,
+  ): Promise<void> {
+    try {
+      this.logger.log(
+        `REMO API 골프 분석 요청: uuid=${uuid}, video size=${videoBuffer.length} bytes`,
+      );
+
+      const remoResult = await this.remoApiService.requestGolfSwingAnalysis(
+        videoBuffer,
+        uuid,
+        height || '175',
+      );
+
+      await this.analysisRepository.update(analysisId, {
+        status: 'processing',
+        waitTime: remoResult.waitTime,
+        creditUsed: remoResult.credit,
+      });
+
+      this.logger.log(
+        `REMO API 분석 요청 성공: uuid=${uuid}, waitTime=${remoResult.waitTime}s`,
+      );
+    } catch (error) {
+      this.logger.error(`REMO API 호출 실패: uuid=${uuid} - ${error.message}`);
+      await this.analysisRepository
+        .update(analysisId, { status: 'failed' })
+        .catch((e) =>
+          this.logger.error(`status=failed 갱신 실패: ${e.message}`),
+        );
+    }
   }
 
   /**
@@ -259,9 +285,26 @@ export class GolfSwingController {
     } catch (error) {
       this.logger.error(`REMO API 결과 조회 실패: ${error.message}`, error.stack);
 
-      // 특정 에러 코드 처리
+      // 진행 중 - 상태를 유지하고 재시도를 유도한다
       if (error.message.includes('534') || error.message.includes('분석 중')) {
         return { message: '분석이 진행 중입니다.', status: 'processing' };
+      }
+
+      // 확정 실패(520 등)를 processing 으로 두면 사용자가 영구히 "분석 중" 화면을 본다.
+      // 실제로 이 때문에 12건이 2026-02~05 부터 정체되어 있었다.
+      // REMO 가 영상에서 스윙 구간을 인식하지 못한 경우가 대부분이다.
+      //   예: "first golf section recognition error, error: list index out of range"
+      if (error.message.includes('520')) {
+        await this.analysisRepository
+          .update(analysisId, { status: 'failed' })
+          .catch((e) =>
+            this.logger.error(`status=failed 갱신 실패: ${e.message}`),
+          );
+        return {
+          message:
+            '영상에서 스윙 동작을 인식하지 못했습니다. 전신이 나오도록 다시 촬영해 주세요.',
+          status: 'failed',
+        };
       }
 
       throw new BadRequestException(`결과 조회 실패: ${error.message}`);
