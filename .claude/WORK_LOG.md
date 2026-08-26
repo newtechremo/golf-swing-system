@@ -15,8 +15,9 @@
 >   **검수 URL: https://parkgolf-ai-pro.vercel.app**
 >   백엔드 API: https://api-golf.remo.re.kr/api (health 200, 로그인·대상자·분석결과 검증 완료)
 >   ⚠️ `golf.remo.re.kr` 은 아직 자체 서버 → **실서비스 영향 없음**
-> ▶ **다음**: 검수 후 ① 도메인 CNAME 전환 ② 체형분석 이슈(S1-2/S1-6b/S1-9/S1-13)
->   ③ `history/subject/:id` 400 버그 조사
+> ✅ GitHub ↔ Vercel 연동 완료 — `git push` 자동배포 동작 (브랜치 `feature/vercel-migration`)
+> ▶ **다음**: 검수 후 ① PR → main 병합 ② 도메인 CNAME 전환
+>   ③ 체형분석 이슈(S1-2/S1-6b/S1-9/S1-13) ④ `history/subject/:id` 400 버그
 > ✅ golf.remo.re.kr 완전 복구 확인 (2026-08-26)
 >   DNS·MySQL·백엔드·인증서(~11/24)·외부접속 전부 검증 완료
 > ✅ **GitHub Actions `SERVER_HOST`/`PROJECT_PATH` 갱신 완료**
@@ -29,6 +30,53 @@
 ## 작업 이력
 
 ### 2026-08-26
+
+### [2026-08-26] GitHub ↔ Vercel 연동 완료 — git push 자동배포 동작
+
+**❌ 이전 보고 정정 — "CLI 버그"가 아니었다**
+`vercel env add ... preview` 가 `git_branch_required` 를 반환한 것은
+**프로젝트에 Git 이 연결되어 있지 않았기 때문**이다.
+Preview 배포는 Git 브랜치 개념에 묶여 있어, Git 미연결 프로젝트에는
+preview 브랜치가 존재하지 않는다. CLI 의 정상 동작이었다.
+(다만 Git 연결 후에도 CLI 는 계속 거부 → **REST API 로 우회 성공**)
+
+**작업 내역**
+| # | 작업 | 결과 |
+|---|------|------|
+| 1 | 브랜치 `feature/vercel-migration` 생성 + 커밋 3건 | 백엔드 / 프론트 / 문서·운영 분리 |
+| 2 | 양쪽 빌드 검증 후 GitHub push | backend `nest build` ✅ / frontend 14라우트 ✅ |
+| 3 | `vercel git connect` | `newtechremo/golf-swing-system` 연결 |
+| 4 | `rootDirectory` `.` → **`frontend`** (REST API) | 모노레포 대응. 안 바꾸면 Git 배포 시 빌드 실패 |
+| 5 | preview 환경변수 (REST API `POST /v10/projects/{id}/env`) | 3개 환경 전부 설정 완료 |
+| 6 | 빈 커밋 push → 자동배포 검증 | **30초 내 BUILDING → READY** ✅ |
+
+**커밋**
+```
+9a716ba chore: Trigger Vercel deployment
+7ad228c docs: Add analysis docs, deploy scripts, and PM2 crash protection
+fbf7145 feat: Prepare frontend for Vercel deployment
+0c5fa67 fix: Make REMO analysis async and harden auth/file serving
+```
+브랜치: `feature/vercel-migration` (main 미병합 — 검수 후 PR 예정)
+
+**Vercel 프로젝트 최종 상태**
+```
+rootDirectory   : frontend
+Git 연결        : github newtechremo/golf-swing-system
+프로덕션 브랜치 : main
+framework       : nextjs
+env             : NEXT_PUBLIC_API_BASE_URL (production/preview/development)
+```
+
+**⚠️ preview 배포는 SSO 보호로 302**
+`ssoProtection: {deploymentType: 'all_except_custom_domains'}` (팀 기본값).
+preview URL 은 Vercel 로그인 없이 접근 불가 → **검수는 production 별칭 사용**:
+**https://parkgolf-ai-pro.vercel.app** (200 확인)
+필요 시 대시보드 Settings → Deployment Protection 에서 조정 가능.
+
+**실서비스 영향 없음**
+`golf.remo.re.kr` A 레코드 = `49.169.8.19` (자체 서버) 유지.
+커스텀 도메인 미연결 상태이므로 기존 서비스 정상 동작.
 
 ### [2026-08-26] Vercel 배포 완료 — 검수 가능 상태
 
