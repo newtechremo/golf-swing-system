@@ -1,5 +1,42 @@
 # 08. 상세 작업 플랜 — 확정본
 
+> ## 📌 진행 현황 (2026-08-26 기준)
+>
+> **STEP 0 ~ STEP 3 완료.** 서비스는 https://golf.remo.re.kr 에서 Vercel 로 운영 중이다.
+> 현재 상태 요약은 [`CURRENT_STATUS.md`](../CURRENT_STATUS.md), 상세 이력은
+> [`.claude/WORK_LOG.md`](../.claude/WORK_LOG.md) 참조.
+>
+> | STEP | 상태 | 비고 |
+> |------|------|------|
+> | STEP 0 선결 정리 | ✅ 완료 | 테스트계정 복구 / 멈춘레코드 12건 정리 / PM2·로그 955MB |
+> | STEP 1 백엔드 정리 | ✅ 완료 | 아래 표 참조 |
+> | STEP 2 인프라 + DB | 🟡 부분 | api-golf·nginx·인증서 완료 / **백업 cron·docker-compose 미착수** |
+> | STEP 3 Vercel 이전 | ✅ 완료 | 도메인 CNAME 전환 + GitHub 자동배포 |
+>
+> ### STEP 1 항목별
+> | ID | 상태 | 비고 |
+> |----|------|------|
+> | S1-1 golf REMO 비동기화 | ✅ | |
+> | S1-2 body-posture 비동기화 | ⛔ **불필요** | REMO 체형분석은 **동기 API, 실측 0.42초**. 비동기화 시 상태관리만 증가 |
+> | S1-3 영상 100MB + timeout 180s | ✅ | 120MB → 413 확인 |
+> | S1-4 max_memory_restart 2G | ✅ | |
+> | S1-5 토큰 type 분리 | ✅ | refresh→보호API 200 → **401** |
+> | S1-6 이미지 가드+소유권+경로봉쇄 | ✅ | 미인증 401 / 타인 403 / 탐색 403 |
+> | S1-7 CORS 화이트리스트 | ✅ | |
+> | S1-8 dropSchema·axios·https | ✅ | puppeteer 는 **판단 보류**(Chromium 563MB) |
+> | S1-9 프론트 이미지 blob | ✅ | S1-6 과 같은 커밋 |
+> | S1-10 /api/health | ✅ | |
+> | S1-11 비밀번호 변경 | ✅ | `await` 수정 + **엔드포인트 신규 구현** |
+> | S1-12 REMO 520 → failed | ✅ | |
+> | S1-13 체형 leftSide/back | ⛔ **버그 아님** | REMO 3방향 정상. DB 컬럼이 빈 문자열 = **미업로드**. 4방향 테스트 전부 completed |
+>
+> ### 미착수 (STEP 2 잔여 + 추가)
+> - S2-4 DB 자동 백업 cron
+> - S2-5 `docker-compose.yml` (⚠️ `external: true` 필수)
+> - puppeteer 제거 여부 판단
+> - DB 마이그레이션 도입 / 테스트 코드 / 외부 모니터링
+
+
 **작성일**: 2026-08-26 / **기준 커밋**: `7e34b47` / **개정**: 2차 (전략 확정 반영)
 **확정 전략**: **프론트만 Vercel · 백엔드 + DB 는 현 서버 유지**
 **대체 관계**: [06](./06-execution-plan.md)·[07](./07-deployment-architecture.md) 을 통합한 **실행 기준 문서**

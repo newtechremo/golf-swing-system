@@ -7,26 +7,45 @@
 
 ## 현재 진행 중인 작업
 
-**없음** - 대기 중
+**없음** — 대기 중
 
-> ⚠️ **2026-08-26 기준 서비스 장애 상태**
-> 서버 이전(공인 IP `49.168.236.221` → `49.169.8.19`) 후 실행 세팅이 수행되지 않았다.
-> ✅ **도메인 전환 완료** (2026-08-26) — https://golf.remo.re.kr 이 Vercel 서비스 중
->   백엔드 API: https://api-golf.remo.re.kr/api (자체 서버 유지)
->   ⚠️ **2026-09-09 까지 PM2 golf-frontend + nginx golf vhost 삭제 금지** (롤백 창구)
-> ✅ Vercel 배포 (2026-08-26)
->   대체 URL: https://parkgolf-ai-pro.vercel.app
->   백엔드 API: https://api-golf.remo.re.kr/api (health 200, 로그인·대상자·분석결과 검증 완료)
->   ⚠️ `golf.remo.re.kr` 은 아직 자체 서버 → **실서비스 영향 없음**
-> ✅ GitHub ↔ Vercel 연동 완료 — `git push` 자동배포 동작 (브랜치 `feature/vercel-migration`)
-> ✅ **잔여 개선 완료** — change-password / 이미지 보안 / 재시도 UI / allSettled
-> ▶ **다음**: ① QA ② puppeteer 제거 여부 판단(Chromium 563MB) ③ DB 마이그레이션 도입
-> ✅ golf.remo.re.kr 완전 복구 확인 (2026-08-26)
->   DNS·MySQL·백엔드·인증서(~11/24)·외부접속 전부 검증 완료
-> ✅ **GitHub Actions `SERVER_HOST`/`PROJECT_PATH` 갱신 완료**
-> 🔴 **잔여1: 외부 SSH(22) 미개방** → Actions 배포 불가. self-hosted runner 등 방식 재설계 필요
-> 🟠 **잔여2: DNS 죽은 구 IP 8건** (되살릴 서비스만 선별 필요)
-> ℹ️ 타 서버로 이전된 도메인 9건의 로컬 인증서 잔재는 **사용자 영향 없음 — 방치 가능**
+---
+
+## 📌 현재 상태 (2026-08-26)
+
+> 요약: [`CURRENT_STATUS.md`](../CURRENT_STATUS.md) · 계획: [`docs/08-detailed-work-plan.md`](../docs/08-detailed-work-plan.md)
+
+| 항목 | 상태 |
+|------|------|
+| 서비스 | 🟢 https://golf.remo.re.kr (Vercel, CNAME) |
+| 백엔드 API | 🟢 https://api-golf.remo.re.kr/api (자체서버 `49.169.8.19`) |
+| MySQL | 🟢 running / `restart=unless-stopped` |
+| TLS | 🟢 양 도메인 ~2026-11-24 |
+| 배포 | `git push origin main` → Vercel 자동배포 (~15초) |
+| 데이터 | 강사 5 · 대상자 14 · 스윙 completed 72 / failed 17 / processing 2 · 체형 40 |
+
+### ⚠️ 2026-09-09 까지 삭제 금지
+**PM2 `golf-frontend` + nginx `golf.remo.re.kr` vhost** — Vercel 전환 롤백 창구.
+문제 시 A 레코드 복귀로 5분 내 복구되나, 받아줄 서버가 살아 있어야 한다.
+```bash
+aws route53 change-resource-record-sets --hosted-zone-id Z0575940EHXG9YRNO7QK --profile remo-aws \
+  --change-batch '{"Changes":[
+    {"Action":"DELETE","ResourceRecordSet":{"Name":"golf.remo.re.kr.","Type":"CNAME","TTL":300,
+      "ResourceRecords":[{"Value":"6ab47e2c9278e9ac.vercel-dns-016.com."}]}},
+    {"Action":"CREATE","ResourceRecordSet":{"Name":"golf.remo.re.kr.","Type":"A","TTL":300,
+      "ResourceRecords":[{"Value":"49.169.8.19"}]}}]}'
+```
+
+### 다음 작업 후보
+| # | 항목 | 비고 |
+|---|------|------|
+| 1 | **QA** | https://golf.remo.re.kr / `test@example.com` / `Test1234!` |
+| 2 | puppeteer 제거 판단 | 사용처 0건, Chromium 캐시 **563MB**. PDF 계획 여부에 달림 |
+| 3 | DB 자동 백업 cron | 현재 수동 백업 1회뿐 |
+| 4 | `docker-compose.yml` | DB 구성이 코드에 없음 (⚠️ `external: true` 필수) |
+| 5 | DB 마이그레이션 도입 | 프로덕션 `synchronize:false` + 마이그레이션 0건 = 스키마 변경 경로 없음 |
+| 6 | 외부 모니터링 | 2.4개월 중단을 아무도 몰랐다. `/api/health` 준비됨 |
+| 7 | `CLAUDE.md` 미해결 9건 재판정 | 2025-12-11 기준 → E2E 재현 필요 |
 
 ---
 
