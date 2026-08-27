@@ -68,7 +68,7 @@ Authorization: Bearer <accessToken>
 
 ---
 
-# 2. 엔드포인트 전체 (24개)
+# 2. 엔드포인트 전체 (26개)
 
 ## 2-1. `/auth` — 인증
 
@@ -170,6 +170,7 @@ Authorization: Bearer <refreshToken>
 | PUT | `/golf-swing/analysis/:id/memo` | 메모 |
 | GET | `/golf-swing/analysis/:id/video` | 결과 영상 URL |
 | GET | `/golf-swing/analysis/:id/images` | 8단계 구간 이미지 |
+| GET | `/golf-swing/analysis/:id/pdf` | **결과서 PDF** |
 | DELETE | `/golf-swing/analysis/:id` | 삭제 (204) |
 
 ### `POST /golf-swing/analyze`
@@ -243,6 +244,7 @@ REMO 에서 결과·각도·결과영상을 받아 DB 에 저장하고 `complete
 | GET | `/body-posture/images/*` | ✅ | 결과 이미지 서빙 |
 | GET | `/body-posture/analysis/:id` | ✅ | 결과 조회 |
 | PUT | `/body-posture/analysis/:id/memo` | ✅ | 메모 |
+| GET | `/body-posture/analysis/:id/pdf` | ✅ | **결과서 PDF** |
 | DELETE | `/body-posture/analysis/:id` | ✅ | 삭제 (204) |
 
 ### `POST /body-posture/analyze`
@@ -333,7 +335,54 @@ subjectId  : 7
 
 ---
 
-## 2-6. `/health` — 헬스체크 (가드 없음)
+## 2-6. 결과서 PDF
+
+| Method | Path |
+|--------|------|
+| GET | `/golf-swing/analysis/:id/pdf` |
+| GET | `/body-posture/analysis/:id/pdf` |
+
+**응답** — `Content-Type: application/pdf` 바이너리. JSON 이 아니다.
+
+```
+Content-Disposition: attachment;
+  filename="___________91.pdf";
+  filename*=UTF-8''%EA%B3%A8%ED%94%84...
+```
+
+파일명이 한글이라 두 벌로 보낸다. `filename=` 은 ASCII 로 눌러 쓴 대체값,
+`filename*=` 이 RFC 5987 실제 값이다. 한글을 `filename=` 에 그대로 넣으면 이름이 깨진다.
+
+**전제 조건**
+
+| 대상 | 조건 | 위반 시 |
+|------|------|---------|
+| 골프 | `status === 'completed'` | 400 |
+| 체형 | 분석된 방향 1개 이상 | 400 |
+| 공통 | 본인 소유 | 골프 400 / 체형 403 |
+
+**렌더링 방식**
+
+헤드리스 크롬(puppeteer)이 서버에서 HTML 을 A4 PDF 로 찍는다. 실측 **0.3~0.7초**.
+
+- 브라우저 인스턴스는 **하나를 재사용**한다. 요청마다 띄우면 1초 + 100MB 씩 든다
+- 크롬 실행 파일은 `PUPPETEER_EXECUTABLE_PATH` (기본 `/usr/bin/google-chrome`)
+- `backend/.puppeteerrc.cjs` 의 `skipDownload: true` 로 번들 크롬을 받지 않는다
+- 한글은 서버의 **Noto Sans CJK KR** 로 렌더링된다. 폰트가 없으면 두부(□)가 된다
+
+> ⚠️ 문서 내용은 화면(`analysis-result` · `body-analysis-result`)과 일치해야 한다.
+> 항목 라벨·구간 이름·등급 판정 기준이 프론트와 백엔드 양쪽에 중복 정의되어 있다.
+> 한쪽만 고치면 화면과 결과서가 어긋난다.
+>
+> | 정의 | 프론트 | 백엔드 |
+> |------|--------|--------|
+> | 스윙 항목·범위 | `app/analysis-result/page.tsx` `PHASE_FIELDS` | `pdf-generation.service.ts` `PHASE_FIELDS` |
+> | 체형 항목 | `app/body-analysis-result/page.tsx` 섹션 | `pdf-generation.service.ts` `POSTURE_SECTIONS` |
+> | 스윙 멘트 | `lib/golf-swing-comments.ts` | `constants/golf-swing-comments.ts` |
+
+---
+
+## 2-7. `/health` — 헬스체크 (가드 없음)
 
 ### `GET /health`
 ```jsonc
@@ -375,6 +424,17 @@ CORS_ORIGINS=https://golf.remo.re.kr,https://parkgolf-ai-pro.vercel.app,http://l
 Vercel 프리뷰 도메인에서 테스트하려면 해당 URL 을 임시로 추가하고
 백엔드를 `pm2 restart golf-backend --update-env` 로 재기동해야 한다.
 
+## 응답 헤더 노출
+
+```ts
+exposedHeaders: ['Content-Disposition']
+```
+
+브라우저는 CORS 응답에서 **안전 목록에 있는 헤더만** JS 에 넘겨준다.
+`Content-Disposition` 은 그 목록에 없다. 명시하지 않으면 서버가 보낸 헤더가
+네트워크 탭에는 보이는데 `response.headers` 에서는 `undefined` 로 나온다.
+결과서 다운로드 시 파일명이 서버가 정한 값이 아니라 프론트 폴백으로 찍힌다.
+
 ---
 
 # 5. 데이터 모델 요약
@@ -410,3 +470,6 @@ notices / notice_reads / admins  ← 스키마만 존재, 컨트롤러 없음
 | 4 | **인증이 걸린 이미지는 `<img src>` 불가** — blob 방식 사용 |
 | 5 | **소유권 검증을 빠뜨리지 말 것** — 현재 17개 지점에서 `userId !== req.user.sub` 검사 중 |
 | 6 | **프로덕션은 `synchronize: false`** — 엔티티를 바꿔도 스키마가 반영되지 않는다. 마이그레이션 미도입 상태 |
+| 7 | **인증이 걸린 파일은 `<a href>` 다운로드 불가** — 링크는 Authorization 헤더를 못 붙인다. blob 으로 받아 임시 `<a>` 를 클릭시켜야 한다 |
+| 8 | **CORS 응답 헤더는 기본적으로 JS 에 안 보인다** — `Content-Disposition` 을 읽으려면 `exposedHeaders` 에 넣어야 한다 (`main.ts`) |
+| 9 | **등급이 `NULL` 인 지표가 실제로 있다** — REMO 가 일부 grade 를 주지 않는다. `null` 을 '위험'으로 칠하면 정상값을 오독하게 만든다 |

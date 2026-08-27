@@ -27,6 +27,10 @@ async function bootstrap() {
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    // 브라우저는 CORS 응답에서 안전 목록에 있는 헤더만 JS 에 넘겨준다.
+    // Content-Disposition 은 그 목록에 없어서, 명시하지 않으면
+    // 결과서 다운로드 시 프론트가 서버가 정한 파일명을 읽지 못한다.
+    exposedHeaders: ['Content-Disposition'],
   });
 
   // Global prefix

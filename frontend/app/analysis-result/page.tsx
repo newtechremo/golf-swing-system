@@ -26,6 +26,7 @@ import {
   getScoreStatus,
   type AnalysisFeedback
 } from "@/lib/golf-swing-comments"
+import { downloadPdf } from "@/lib/api"
 
 // 숫자 또는 문자열을 소수점 1자리로 포맷하는 헬퍼 함수
 function formatValue(value: string | number | null | undefined): string {
@@ -187,6 +188,7 @@ export default function AnalysisResultPage() {
   const [memo, setMemo] = useState("")
   const [tempMemo, setTempMemo] = useState("")
   const [error, setError] = useState<string | null>(null)
+  const [isDownloading, setIsDownloading] = useState(false)
 
   // 분석 데이터 로드
   const loadAnalysis = useCallback(async () => {
@@ -308,8 +310,27 @@ export default function AnalysisResultPage() {
     setTempMemo("")
   }
 
-  const handleDownloadPDF = () => {
-    alert("PDF 다운로드 기능이 실행됩니다")
+  /**
+   * 결과서(PDF) 내려받기.
+   *
+   * 서버가 헤드리스 크롬으로 렌더링하므로 1초 안팎 걸린다.
+   * 그동안 버튼을 잠가 중복 요청을 막는다.
+   */
+  const handleDownloadPDF = async () => {
+    if (!analysisId || isDownloading) return
+
+    setIsDownloading(true)
+    try {
+      await downloadPdf(
+        `/golf-swing/analysis/${analysisId}/pdf`,
+        `골프스윙분석_${member?.name ?? "결과서"}_${analysisId}.pdf`
+      )
+    } catch (err) {
+      console.error("결과서 다운로드 실패:", err)
+      alert("결과서를 만들지 못했습니다. 잠시 후 다시 시도해주세요.")
+    } finally {
+      setIsDownloading(false)
+    }
   }
 
   const handleShare = () => {
@@ -822,9 +843,18 @@ export default function AnalysisResultPage() {
 
             {/* Action Buttons */}
             <div className="flex justify-center gap-4 pb-6">
-              <Button size="lg" className="bg-primary hover:bg-primary/90" onClick={handleDownloadPDF}>
-                <Download className="mr-2 h-4 w-4" />
-                결과서 다운로드 (PDF)
+              <Button
+                size="lg"
+                className="bg-primary hover:bg-primary/90"
+                onClick={handleDownloadPDF}
+                disabled={isDownloading}
+              >
+                {isDownloading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="mr-2 h-4 w-4" />
+                )}
+                {isDownloading ? "결과서 만드는 중..." : "결과서 다운로드 (PDF)"}
               </Button>
               <Button size="lg" variant="outline" onClick={handleShare}>
                 <Share2 className="mr-2 h-4 w-4" />

@@ -16,6 +16,8 @@ import {
   HttpStatus,
   Inject,
   Logger,
+  Res,
+  StreamableFile,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
@@ -31,6 +33,9 @@ import { GolfSwingAngleEntity } from '../../infrastructure/database/entities/gol
 import { S3UploadService } from '../../infrastructure/external-services/s3-upload.service';
 import { RemoApiService } from '../../infrastructure/external-services/remo-api.service';
 import { GolfSwingScoreService } from '../../infrastructure/services/golf-swing-score.service';
+import { PdfGenerationService } from '../../infrastructure/external-services/pdf-generation.service';
+import { setPdfDownloadHeaders } from '../utils/pdf-response.util';
+import type { Response as ExpressResponse } from 'express';
 
 @Controller('golf-swing')
 @UseGuards(JwtAuthGuard)
@@ -44,6 +49,7 @@ export class GolfSwingController {
     private readonly s3UploadService: S3UploadService,
     private readonly remoApiService: RemoApiService,
     private readonly golfSwingScoreService: GolfSwingScoreService,
+    private readonly pdfGenerationService: PdfGenerationService,
     @Inject('IGolfSwingAnalysisRepository')
     private readonly analysisRepository: IGolfSwingAnalysisRepository,
     @InjectRepository(GolfSwingResultEntity)
@@ -499,6 +505,60 @@ export class GolfSwingController {
       this.logger.error(`구간 이미지 조회 실패: ${error.message}`);
       throw new BadRequestException(`이미지 조회 실패: ${error.message}`);
     }
+  }
+
+  /**
+   * 골프 스윙 분석 결과서(PDF) 다운로드
+   * GET /golf-swing/analysis/:id/pdf
+   */
+  @Get('analysis/:id/pdf')
+  async downloadAnalysisPdf(
+    @Request() req,
+    @Param('id', ParseIntPipe) analysisId: number,
+    @Res({ passthrough: true }) res: ExpressResponse,
+  ): Promise<StreamableFile> {
+    const userId = req.user.sub;
+
+    // 결과서에는 대상자 신체정보와 강사 이름이 들어간다.
+    // GetSwingAnalysisUseCase 의 반환값에는 그것들이 없으므로 엔티티를 직접 읽는다.
+    const analysis = await this.analysisRepository.findWithRelations(analysisId);
+
+    if (!analysis) {
+      throw new BadRequestException('분석을 찾을 수 없습니다.');
+    }
+
+    if (analysis.userId !== userId) {
+      throw new BadRequestException('이 분석에 대한 권한이 없습니다.');
+    }
+
+    if (analysis.status !== 'completed') {
+      throw new BadRequestException('분석이 완료되지 않아 결과서를 만들 수 없습니다.');
+    }
+
+    const pdf = await this.pdfGenerationService.generateGolfSwingPdf({
+      analysisId: analysis.id,
+      analysisDate: analysis.analysisDate,
+      subject: {
+        name: analysis.subject?.name ?? '-',
+        phoneNumber: analysis.subject?.phoneNumber,
+        birthDate: analysis.subject?.birthDate,
+        gender: analysis.subject?.gender,
+        height: analysis.subject?.height,
+        weight: analysis.subject?.weight,
+      },
+      instructorName: analysis.user?.name ?? '-',
+      memo: analysis.memo,
+      result: analysis.result as unknown as Record<string, any>,
+      swingType: analysis.swingType as unknown as Record<string, any>,
+    });
+
+    setPdfDownloadHeaders(
+      res,
+      `골프스윙분석_${analysis.subject?.name ?? 'report'}_${analysis.id}.pdf`,
+      pdf.length,
+    );
+
+    return new StreamableFile(pdf);
   }
 
   /**

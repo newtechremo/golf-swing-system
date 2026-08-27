@@ -193,7 +193,7 @@ DB 장애 시 49,368회 재시작·로그 954MB 폭주가 재발하지 않는다
 ### 판단 필요
 | 항목 | 내용 |
 |------|------|
-| **puppeteer 제거** | `PdfGenerationService` 가 `app.module.ts` 등록 외 **사용처 0건**. `node_modules` 13MB + **Chromium 캐시 563MB**. PDF 리포트 계획이 없으면 제거 대상 |
+| ~~puppeteer 제거~~ | **2026-08-27 해소** — 결과서(PDF) 기능을 완성해 실사용 중. 시스템 크롬을 쓰도록 바꿔 번들 Chromium 의존을 없앴다 |
 
 ### 미착수
 | 항목 | 사유 |

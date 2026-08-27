@@ -19,6 +19,7 @@ import {
   HttpStatus,
   Inject,
   Logger,
+  StreamableFile,
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -36,6 +37,9 @@ import { IBodyPostureAnalysisRepository } from '../../application/interfaces/rep
 import { FrontPostureResultEntity } from '../../infrastructure/database/entities/front-posture-result.entity';
 import { SidePostureResultEntity } from '../../infrastructure/database/entities/side-posture-result.entity';
 import { BackPostureResultEntity } from '../../infrastructure/database/entities/back-posture-result.entity';
+import { PdfGenerationService } from '../../infrastructure/external-services/pdf-generation.service';
+import { setPdfDownloadHeaders } from '../utils/pdf-response.util';
+import type { Response as ExpressResponse } from 'express';
 
 @Controller('body-posture')
 export class BodyPostureController {
@@ -57,6 +61,7 @@ export class BodyPostureController {
     private readonly sideResultRepository: Repository<SidePostureResultEntity>,
     @InjectRepository(BackPostureResultEntity)
     private readonly backResultRepository: Repository<BackPostureResultEntity>,
+    private readonly pdfGenerationService: PdfGenerationService,
   ) {}
 
   /**
@@ -615,6 +620,96 @@ export class BodyPostureController {
     const userId = req.user.sub;
     await this.updatePostureMemoUseCase.execute(userId, analysisId, memo);
     return { message: '메모가 업데이트되었습니다.' };
+  }
+
+  /**
+   * 체형 분석 결과서(PDF) 다운로드
+   * GET /body-posture/analysis/:id/pdf
+   */
+  @Get('analysis/:id/pdf')
+  @UseGuards(JwtAuthGuard)
+  async downloadAnalysisPdf(
+    @Request() req,
+    @Param('id', ParseIntPipe) analysisId: number,
+    @Response({ passthrough: true }) res: ExpressResponse,
+  ): Promise<StreamableFile> {
+    const userId = req.user.sub;
+
+    const analysis = await this.analysisRepository.findWithRelations(analysisId);
+
+    if (!analysis) {
+      throw new NotFoundException('분석 결과를 찾을 수 없습니다.');
+    }
+
+    if (analysis.userId !== userId) {
+      throw new ForbiddenException('이 분석 결과를 조회할 권한이 없습니다.');
+    }
+
+    // sideResults 는 좌/우가 한 배열에 섞여 들어온다. sideType 으로 가른다.
+    const leftSide = analysis.sideResults?.find((r) => r.sideType === 'left') ?? null;
+    const rightSide = analysis.sideResults?.find((r) => r.sideType === 'right') ?? null;
+
+    if (!analysis.frontResult && !leftSide && !rightSide && !analysis.backResult) {
+      throw new BadRequestException('분석이 완료된 방향이 없어 결과서를 만들 수 없습니다.');
+    }
+
+    const images = {
+      front: await this.toDataUri(analysis.frontImageUrl),
+      leftSide: await this.toDataUri(analysis.leftSideImageUrl),
+      rightSide: await this.toDataUri(analysis.rightSideImageUrl),
+      back: await this.toDataUri(analysis.backImageUrl),
+    };
+
+    const pdf = await this.pdfGenerationService.generateBodyPosturePdf({
+      analysisId: analysis.id,
+      analysisDate: analysis.analysisDate,
+      subject: {
+        name: analysis.subject?.name ?? '-',
+        phoneNumber: analysis.subject?.phoneNumber,
+        birthDate: analysis.subject?.birthDate,
+        gender: analysis.subject?.gender,
+        height: analysis.subject?.height,
+        weight: analysis.subject?.weight,
+      },
+      instructorName: analysis.user?.name ?? '-',
+      memo: analysis.memo,
+      results: {
+        front: analysis.frontResult as unknown as Record<string, any>,
+        leftSide: leftSide as unknown as Record<string, any>,
+        rightSide: rightSide as unknown as Record<string, any>,
+        back: analysis.backResult as unknown as Record<string, any>,
+      },
+      images,
+    });
+
+    setPdfDownloadHeaders(
+      res,
+      `체형분석_${analysis.subject?.name ?? 'report'}_${analysis.id}.pdf`,
+      pdf.length,
+    );
+
+    return new StreamableFile(pdf);
+  }
+
+  /**
+   * 저장된 이미지를 data: URI 로 바꾼다.
+   *
+   * PDF 렌더러(헤드리스 크롬)는 우리 인증 토큰을 갖고 있지 않다.
+   * /body-posture/images/* 는 인증 가드가 걸려 있으므로 URL 로 넘기면 401 이 나고
+   * 결과서에 빈 칸이 찍힌다. 그래서 파일을 직접 읽어 문서 안에 심는다.
+   *
+   * 읽기에 실패해도 결과서 전체를 실패시키지 않는다. 사진 없이 수치만 나가는 편이 낫다.
+   */
+  private async toDataUri(relativePath?: string | null): Promise<string | null> {
+    if (!relativePath) return null;
+    try {
+      const file = await this.localStorageService.getFile(relativePath);
+      if (!file) return null;
+      return `data:${file.mimeType};base64,${file.buffer.toString('base64')}`;
+    } catch (error) {
+      this.logger.warn(`결과서 이미지 임베드 실패 (${relativePath}): ${error.message}`);
+      return null;
+    }
   }
 
   /**

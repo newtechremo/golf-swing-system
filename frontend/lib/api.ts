@@ -163,4 +163,54 @@ export async function fetchImageObjectUrl(
   }
 }
 
+/**
+ * 인증이 필요한 PDF 를 받아 브라우저에 저장시킨다.
+ *
+ * 결과서 엔드포인트에도 인증 가드가 걸려 있어 <a href> 나 window.open 으로는
+ * 받을 수 없다(둘 다 Authorization 헤더를 못 붙인다).
+ * blob 으로 받은 뒤 임시 <a> 를 만들어 클릭시키는 방식이 유일하게 동작한다.
+ *
+ * 파일명은 서버가 Content-Disposition 에 RFC 5987 로 실어 보낸다.
+ * 못 읽으면 호출측이 준 이름을 쓴다.
+ */
+export async function downloadPdf(
+  path: string,
+  fallbackFilename: string
+): Promise<void> {
+  const response = await api.get(path, { responseType: 'blob' })
+
+  const disposition = response.headers?.['content-disposition'] as string | undefined
+  const filename = parseFilename(disposition) || fallbackFilename
+
+  const blobUrl = URL.createObjectURL(response.data as Blob)
+  try {
+    const link = document.createElement('a')
+    link.href = blobUrl
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+  } finally {
+    // 클릭 직후 해제하면 일부 브라우저에서 저장이 취소된다. 한 틱 미룬다.
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)
+  }
+}
+
+/** Content-Disposition 에서 파일명을 뽑는다. filename* (UTF-8) 를 우선한다 */
+function parseFilename(disposition?: string): string | null {
+  if (!disposition) return null
+
+  const utf8 = disposition.match(/filename\*=UTF-8''([^;]+)/i)
+  if (utf8?.[1]) {
+    try {
+      return decodeURIComponent(utf8[1].trim())
+    } catch {
+      // 인코딩이 깨졌으면 아래 ASCII 폴백으로 넘어간다
+    }
+  }
+
+  const ascii = disposition.match(/filename="?([^";]+)"?/i)
+  return ascii?.[1]?.trim() || null
+}
+
 export default api

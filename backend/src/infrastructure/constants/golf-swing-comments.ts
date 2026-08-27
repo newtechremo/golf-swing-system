@@ -247,3 +247,75 @@ export function getPhaseComments(phase: string, lang: 'ko' | 'en' = 'ko'): { [it
   }
   return result;
 }
+
+/**
+ * DB 결과 필드명(camelCase)을 (phase, item) 쌍으로 분해한다.
+ *
+ * 예) 'addressShoulderTilt' -> { phase: 'address', item: 'shoulder_tilt' }
+ *
+ * 주의: 'backswingTopReverseSpine' 은 'backswing' 접두사에도 걸린다.
+ * 이때 남는 문자열 'TopReverseSpine' 은 어떤 item 에도 매칭되지 않으므로
+ * 바깥 루프가 계속 돌아 'backswingTop' 에서 올바르게 잡힌다.
+ * 즉 접두사 매칭 실패 시 즉시 null 을 반환하면 안 된다.
+ */
+export function parseResultFieldName(
+  fieldName: string,
+): { phase: string; item: string } | null {
+  const phaseMapping: { [key: string]: string } = {
+    address: 'address',
+    takeback: 'takeback',
+    backswing: 'backswing',
+    backswingTop: 'backswingtop',
+    downswing: 'downswing',
+    impact: 'impact',
+    follow: 'follow',
+    finish: 'finish',
+  };
+
+  const itemMapping: { [key: string]: string } = {
+    ShoulderTilt: 'shoulder_tilt',
+    Stance: 'stance',
+    UpperBodyTilt: 'upper_body_tilt',
+    LeftFootFix: 'left_foot_fix',
+    LeftShoulderRotation: 'left_shoulder_rotation',
+    LeftArmFlexion: 'left_arm_flexion',
+    RightArmFlexion: 'right_arm_flexion',
+    RightHipRotation: 'right_hip_rotation',
+    HeadLocation: 'head_location',
+    ReverseSpine: 'reverse_spine',
+    RightLegFlexion: 'right_leg_flexion',
+    CenterOfGravity: 'center_of_gravity',
+    RightElbowLocation: 'right_elbow_location',
+    RightArmRotation: 'right_arm_rotation',
+    HangingBack: 'hanging_back',
+    LeftLineAlign: 'left_line_align',
+    ChickenWing: 'chicken_wing',
+    RightFootRotation: 'right_foot_rotation',
+  };
+
+  for (const [phaseKey, phaseValue] of Object.entries(phaseMapping)) {
+    if (!fieldName.startsWith(phaseKey)) continue;
+    const remaining = fieldName.slice(phaseKey.length);
+    for (const [itemKey, itemValue] of Object.entries(itemMapping)) {
+      if (remaining.startsWith(itemKey)) {
+        return { phase: phaseValue, item: itemValue };
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * DB 필드명으로 멘트를 바로 조회한다.
+ * 프론트엔드 lib/golf-swing-comments.ts 의 동명 함수와 동작이 같아야 한다.
+ */
+export function getCommentByFieldName(
+  fieldName: string,
+  level: 1 | 2 | 3,
+  lang: 'ko' | 'en' = 'ko',
+): string {
+  const parsed = parseResultFieldName(fieldName);
+  if (!parsed) return '';
+  return getComment(parsed.phase, parsed.item, level, lang);
+}

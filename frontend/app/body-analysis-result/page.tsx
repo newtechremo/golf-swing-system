@@ -9,7 +9,7 @@ import { Home, Target, Download, Share2, User, Calendar, Loader2 } from "lucide-
 import Image from "next/image"
 import { useState, useEffect, useCallback, useRef } from "react"
 import { getSubjectDetail, type SubjectDetail, getGenderLabel, calculateAge } from "@/lib/subjects"
-import api, { fetchImageObjectUrl } from "@/lib/api"
+import api, { fetchImageObjectUrl, downloadPdf } from "@/lib/api"
 
 type AnalysisItem = {
   label: string
@@ -200,6 +200,7 @@ export default function BodyAnalysisResultPage() {
   const analysisId = searchParams.get("analysisId")
 
   const [member, setMember] = useState<SubjectDetail | null>(null)
+  const [isDownloading, setIsDownloading] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [analysisData, setAnalysisData] = useState<AnalysisApiResponse | null>(null)
   // 생성한 blob URL 을 추적해 해제한다
@@ -388,8 +389,25 @@ export default function BodyAnalysisResultPage() {
     router.push("/")
   }
 
-  const handleDownloadPDF = () => {
-    alert("PDF 다운로드 기능이 실행됩니다")
+  /**
+   * 결과서(PDF) 내려받기.
+   * 분석된 방향이 하나도 없으면 서버가 400 을 준다.
+   */
+  const handleDownloadPDF = async () => {
+    if (!analysisId || isDownloading) return
+
+    setIsDownloading(true)
+    try {
+      await downloadPdf(
+        `/body-posture/analysis/${analysisId}/pdf`,
+        `체형분석_${member?.name ?? "결과서"}_${analysisId}.pdf`
+      )
+    } catch (err) {
+      console.error("결과서 다운로드 실패:", err)
+      alert("결과서를 만들지 못했습니다. 잠시 후 다시 시도해주세요.")
+    } finally {
+      setIsDownloading(false)
+    }
   }
 
   const handleShare = () => {
@@ -539,9 +557,18 @@ export default function BodyAnalysisResultPage() {
             <Home className="mr-2 h-4 w-4" />
             처음으로
           </Button>
-          <Button size="lg" className="bg-primary hover:bg-primary/90" onClick={handleDownloadPDF}>
-            <Download className="mr-2 h-4 w-4" />
-            결과서 다운로드 (PDF)
+          <Button
+            size="lg"
+            className="bg-primary hover:bg-primary/90"
+            onClick={handleDownloadPDF}
+            disabled={isDownloading}
+          >
+            {isDownloading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="mr-2 h-4 w-4" />
+            )}
+            {isDownloading ? "결과서 만드는 중..." : "결과서 다운로드 (PDF)"}
           </Button>
           <Button size="lg" variant="outline" onClick={handleShare}>
             <Share2 className="mr-2 h-4 w-4" />

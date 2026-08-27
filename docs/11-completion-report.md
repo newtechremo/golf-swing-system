@@ -339,7 +339,7 @@ TLS (양 도메인)      Let's Encrypt ~2026-11-24
 ## 판단 필요
 | 항목 | 내용 |
 |------|------|
-| **puppeteer 제거** | `PdfGenerationService` 가 `app.module.ts` 등록 외 **사용처 0건**. `node_modules` 13MB + **Chromium 캐시 563MB**. PDF 리포트 계획 여부에 달림 |
+| ~~puppeteer 제거~~ | **2026-08-27 해소** — 제거가 아니라 완성으로 결론. 결과서(PDF) 기능 실사용 중 (`docs/09-api-reference.md` §2-6) |
 
 ## 미착수
 | # | 항목 | 사유 |

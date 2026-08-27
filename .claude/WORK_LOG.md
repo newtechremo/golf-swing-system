@@ -51,6 +51,88 @@ aws route53 change-resource-record-sets --hosted-zone-id Z0575940EHXG9YRNO7QK --
 
 ## 작업 이력
 
+### 2026-08-27
+
+### [2026-08-27] 결과서(PDF) 기능 완성
+
+**문제** — 앞뒤는 있는데 중간이 비어 있었다
+
+| 구간 | 상태 |
+|------|------|
+| 프론트 "결과서 다운로드 (PDF)" 버튼 | 존재하나 `alert()` 만 띄우는 가짜 |
+| API 엔드포인트 | **없음** |
+| `PdfGenerationService` (566줄) | 있으나 호출처 0건 |
+
+백엔드 서비스는 `ba8f169` 에서 들어온 뒤 한 번도 불린 적이 없다.
+화면에는 버튼이 있으니 QA 에서는 고장난 기능으로 잡힌다.
+
+**기존 템플릿이 실데이터와 불일치** — 재작성이 필요했다
+
+| 템플릿 참조 | 실제 |
+|-------------|------|
+| `analysisResult.result.swingSpeed` · `swingPath` · `impactPosition` | 존재하지 않는 필드 |
+| `analysisResults.side` | 실제는 `leftSide` / `rightSide` 분리 |
+| `state === 1` | 실제는 `status: 'completed'` enum |
+
+566줄 중 대부분이 CSS 였고 실데이터 렌더링은 사실상 없었다.
+
+**작업 내용**
+
+1. `pdf-generation.service.ts` 전면 재작성 (636줄)
+   - 골프: 8구간 × 측정값/게이지/멘트 + 종합점수
+   - 체형: 방향별 분석 이미지 + 항목별 수치/등급 배지
+   - 항목 정의는 화면(`PHASE_FIELDS` / 섹션 구성)과 1:1 대응
+2. 엔드포인트 2개 추가
+   - `GET /golf-swing/analysis/:id/pdf`
+   - `GET /body-posture/analysis/:id/pdf`
+3. 프론트 배선 — `downloadPdf()` 헬퍼 + 버튼 로딩 상태
+
+**해결한 문제들**
+
+| 문제 | 원인 | 해결 |
+|------|------|------|
+| 브라우저 leak | `browser.close()` 가 `try` 안에 있어 `page.pdf()` 실패 시 미호출 | 인스턴스 재사용 + `page.close()` 를 `finally` 로 |
+| `Could not find Chrome` | 캐시엔 127, puppeteer 24.34 는 143 요구 | `PUPPETEER_EXECUTABLE_PATH` 로 시스템 크롬(137) 사용 |
+| npm ci 마다 300MB 다운로드 | puppeteer 기본 동작 | `backend/.puppeteerrc.cjs` `skipDownload: true` |
+| 한글 파일명 깨짐 | `filename=` 에 비ASCII | RFC 5987 `filename*=UTF-8''` 병기 |
+| 프론트가 파일명 못 읽음 | CORS 안전목록에 `Content-Disposition` 없음 | `main.ts` `exposedHeaders` 추가 |
+| 등급 `NULL` 을 "위험"으로 표시 | 색상 삼항연산자가 null 을 danger 로 흘림 | "판정 불가" 회색 배지 분리 |
+
+**검증**
+
+| 항목 | 결과 |
+|------|------|
+| 골프 결과서 (id=91) | 200 · 449KB · 3쪽 · **0.62초** |
+| 체형 결과서 (id=40) | 200 · 623KB · 2쪽 · **0.34초** |
+| 한글 렌더링 | 정상 (Noto Sans CJK KR) |
+| nginx 경유 | 정상 |
+| 토큰 없음 / 위조 | 401 |
+| 타 강사 분석 | 골프 400 / 체형 403 |
+| 미완료 분석 | 400 |
+| 브라우저 E2E | `골프스윙분석_홍길동_91.pdf` · `체형분석_석재우_40.pdf` 저장 확인 |
+
+**수정 파일**
+
+```
+backend/src/infrastructure/external-services/pdf-generation.service.ts  (재작성)
+backend/src/infrastructure/constants/golf-swing-comments.ts             (+getCommentByFieldName)
+backend/src/presentation/controllers/golf-swing.controller.ts           (+PDF 엔드포인트)
+backend/src/presentation/controllers/body-posture.controller.ts         (+PDF 엔드포인트)
+backend/src/presentation/utils/pdf-response.util.ts                     (신규)
+backend/src/main.ts                                                     (exposedHeaders)
+backend/.puppeteerrc.cjs                                                (신규)
+backend/.env                                                            (PUPPETEER_EXECUTABLE_PATH)
+frontend/lib/api.ts                                                     (+downloadPdf)
+frontend/app/analysis-result/page.tsx                                   (버튼 배선)
+frontend/app/body-analysis-result/page.tsx                              (버튼 배선)
+docs/09-api-reference.md                                                (26개 엔드포인트로 갱신)
+```
+
+> ⚠️ 항목 라벨·등급 기준이 프론트와 백엔드에 **중복 정의**되어 있다.
+> 한쪽만 고치면 화면과 결과서가 어긋난다. `docs/09-api-reference.md` §2-6 참조.
+
+---
+
 ### 2026-08-26
 
 ### [2026-08-26] 잔여 개선 작업 완료 (비밀번호 변경 / 이미지 보안 / 재시도 UI)
@@ -734,4 +816,4 @@ DNS 도달 여부와 인증서 유효성이 **정확히 1:1 대응** — 인과�
 
 1. E2E 테스트 이슈 수정 (우선순위: Critical → Major → Minor)
 2. REMO API 실제 분석 테스트
-3. PDF 템플릿 완성
+3. ~~PDF 템플릿 완성~~ → **2026-08-27 완료**

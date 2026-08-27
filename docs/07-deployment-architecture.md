@@ -298,17 +298,31 @@ REMO 에 요청은 갔고 **크레딧도 차감됐는데 결과를 못 받아왔
 | **cron 스케줄러** | `local-storage.service.ts:286` `@Cron(EVERY_DAY_AT_MIDNIGHT)` 파일 정리 | ❌ 상주 프로세스 필요 |
 | **MySQL 연결** | 로컬 도커, NAT 뒤 | ❌ 외부에서 도달 불가 + 서버리스 커넥션 풀 문제 |
 | **장시간 REMO 호출** | 30~60초 | 🟡 §1-3 비동기화로 해소되나, 백그라운드 작업은 상주 프로세스가 필요 |
-| **puppeteer (PDF)** | `app.module.ts` 에 등록되어 있으나 **어떤 컨트롤러도 사용하지 않음** | — **현재 미사용** |
+| **puppeteer (PDF)** | 결과서 렌더링에 사용 (2026-08-27 배선 완료) | — 시스템 크롬 사용 |
 
 **결론: 백엔드는 이 서버에 그대로 둔다.** 로컬 파일 + cron 두 가지만으로도 결론이 난다.
 
-## 덤 — puppeteer 는 죽은 의존성
+## 덤 — puppeteer (2026-08-27 갱신)
 
-`PdfGenerationService` (14.8KB) 가 `app.module.ts:207` 에 provider 로 등록돼 있지만
-**어떤 컨트롤러도 주입받지 않는다.** puppeteer 는 Chromium(~300MB)을 동반한다.
+> 아래 진단은 **2026-08-26 기준**이었고, 다음 날 해소됐다.
+>
+> ~~`PdfGenerationService` 가 provider 로 등록돼 있지만 어떤 컨트롤러도 주입받지 않는다.
+> 기능 계획이 없다면 제거해서 `npm ci` 시간과 디스크를 절약할 수 있다.~~
 
-기능 계획이 없다면 제거해서 `npm ci` 시간과 디스크를 절약할 수 있다.
-계획이 있다면 그대로 둔다. **판단만 하고 넘어가면 되는 항목.**
+**제거가 아니라 완성으로 결론**났다. 프론트에 이미 "결과서 다운로드 (PDF)" 버튼이
+있었고(동작은 `alert()` 뿐이었다), 백엔드 서비스도 있었다. 빠진 건 둘을 잇는 배선뿐이었다.
+
+Chromium 300MB 동반 문제는 **시스템에 설치된 크롬을 쓰도록** 바꿔 해소했다.
+
+```
+backend/.env             PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome
+backend/.puppeteerrc.cjs  skipDownload: true
+```
+
+`npm ci` 는 더 이상 Chromium 을 받지 않는다. 크롬이 없는 환경에 배포한다면
+두 설정을 비워야 puppeteer 가 번들 크롬을 내려받는다.
+
+상세: `docs/09-api-reference.md` §2-6
 
 ---
 

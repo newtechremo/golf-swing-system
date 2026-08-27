@@ -45,7 +45,7 @@ Center (센터/지점)
 | Auth | @nestjs/jwt | 10.2 + bcrypt 6.0 |
 | 파일 저장 | AWS S3 (`@aws-sdk/client-s3` 3.921) + 로컬 파일시스템 | |
 | 이미지 처리 | sharp 0.34 | |
-| PDF | puppeteer 24.27 | |
+| PDF | puppeteer 24.34 | 시스템 크롬 사용 (`PUPPETEER_EXECUTABLE_PATH`) |
 | 스케줄러 | @nestjs/schedule 6.0 (파일 정리용) | |
 | HTTP | axios 1.13 (devDependencies 에 위치 ⚠️) | |
 | Runtime | Node.js v24.13.0 | |
