@@ -365,7 +365,8 @@ Content-Disposition: attachment;
 
 헤드리스 크롬(puppeteer)이 서버에서 HTML 을 A4 PDF 로 찍는다. 실측 **0.3~0.7초**.
 
-- 브라우저 인스턴스는 **하나를 재사용**한다. 요청마다 띄우면 1초 + 100MB 씩 든다
+- 브라우저 인스턴스는 **하나를 재사용**하되, 마지막 렌더링 후 **10분이 지나면 닫는다**
+  (재사용 0.28초 / 콜드 0.60초. 그 차이 때문에 유휴 400MB 를 상주시키지는 않는다)
 - 크롬 실행 파일은 `PUPPETEER_EXECUTABLE_PATH` (기본 `/usr/bin/google-chrome`)
 - `backend/.puppeteerrc.cjs` 의 `skipDownload: true` 로 번들 크롬을 받지 않는다
 - 한글은 서버의 **Noto Sans CJK KR** 로 렌더링된다. 폰트가 없으면 두부(□)가 된다

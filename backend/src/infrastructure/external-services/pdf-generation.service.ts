@@ -1,5 +1,5 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
-import puppeteer, { Browser } from 'puppeteer';
+import puppeteer, { Browser, Page } from 'puppeteer';
 import { getCommentByFieldName } from '../constants/golf-swing-comments';
 
 /**
@@ -180,11 +180,47 @@ export class PdfGenerationService implements OnModuleDestroy {
   private browser: Browser | null = null;
   private launching: Promise<Browser> | null = null;
 
+  /**
+   * 유휴 종료.
+   *
+   * 브라우저를 재사용하면 빠르지만(0.27초 vs 1.3초), 그냥 두면 쓰지 않는 동안에도
+   * 크롬이 400MB 를 붙들고 있는다. 결과서는 하루 몇 건 뽑는 기능이다.
+   * 마지막 렌더링 후 일정 시간이 지나면 닫고, 다음 요청에서 다시 띄운다.
+   */
+  private static readonly IDLE_SHUTDOWN_MS = 10 * 60 * 1000;
+  private idleTimer: NodeJS.Timeout | null = null;
+  private activeRenders = 0;
+
   async onModuleDestroy(): Promise<void> {
-    if (this.browser) {
-      await this.browser.close().catch(() => undefined);
-      this.browser = null;
+    this.clearIdleTimer();
+    await this.closeBrowser();
+  }
+
+  private clearIdleTimer(): void {
+    if (this.idleTimer) {
+      clearTimeout(this.idleTimer);
+      this.idleTimer = null;
     }
+  }
+
+  private async closeBrowser(): Promise<void> {
+    // 먼저 참조를 끊는다. 닫는 동안 새 요청이 들어오면 새 인스턴스를 띄우게 한다.
+    const browser = this.browser;
+    this.browser = null;
+    await browser?.close().catch(() => undefined);
+  }
+
+  private scheduleIdleShutdown(): void {
+    this.clearIdleTimer();
+    this.idleTimer = setTimeout(() => {
+      this.idleTimer = null;
+      if (this.activeRenders > 0) return;
+      this.logger.log('유휴 상태 — PDF 렌더링용 브라우저를 닫는다');
+      void this.closeBrowser();
+    }, PdfGenerationService.IDLE_SHUTDOWN_MS);
+
+    // 타이머가 프로세스 종료를 붙잡지 않게 한다.
+    this.idleTimer.unref();
   }
 
   private async getBrowser(): Promise<Browser> {
@@ -233,8 +269,20 @@ export class PdfGenerationService implements OnModuleDestroy {
    * 탭이 남아 브라우저 메모리가 계속 늘어난다.
    */
   private async renderPdf(html: string): Promise<Buffer> {
-    const browser = await this.getBrowser();
-    const page = await browser.newPage();
+    this.clearIdleTimer();
+    this.activeRenders++;
+
+    let browser: Browser;
+    let page: Page;
+    try {
+      browser = await this.getBrowser();
+      page = await browser.newPage();
+    } catch (error) {
+      // launch/newPage 가 실패하면 아래 finally 를 타지 않는다. 직접 되돌린다.
+      this.activeRenders--;
+      if (this.activeRenders === 0) this.scheduleIdleShutdown();
+      throw error;
+    }
 
     try {
       // 이미지를 data: URI 로 심어두므로 외부 요청이 없다. networkidle 을 기다릴 이유가 없다.
@@ -247,6 +295,8 @@ export class PdfGenerationService implements OnModuleDestroy {
       return Buffer.from(pdfBuffer);
     } finally {
       await page.close().catch(() => undefined);
+      this.activeRenders--;
+      if (this.activeRenders === 0) this.scheduleIdleShutdown();
     }
   }
 
