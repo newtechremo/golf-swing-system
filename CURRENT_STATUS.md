@@ -226,7 +226,7 @@ golf-swing-system/
 ├── CLAUDE.md              작업 규칙 (테스트 계정·포트 등)
 ├── CURRENT_STATUS.md      이 문서
 ├── .claude/WORK_LOG.md    작업 이력 (상세)
-├── docs/                  분석·계획 문서 8종
+├── docs/                  분석·계획·레퍼런스 문서 11종
 │   ├── 01-system-overview.md       시스템 개요
 │   ├── 02-runtime-status.md        런타임 검증
 │   ├── 03-issue-analysis.md        문제 분석 15건
@@ -234,7 +234,10 @@ golf-swing-system/
 │   ├── 05-integration-status.md    연동 검토 (GitHub/REMO/DNS)
 │   ├── 06-execution-plan.md        실행 플랜 상세
 │   ├── 07-deployment-architecture.md  배포 아키텍처 판정
-│   └── 08-detailed-work-plan.md    상세 작업 플랜
+│   ├── 08-detailed-work-plan.md    작업 플랜 + 진행현황
+│   ├── 09-api-reference.md         자체 API 레퍼런스 (24 엔드포인트)
+│   ├── 10-remo-api-reference.md    REMO AI API 레퍼런스 (실측)
+│   └── 11-completion-report.md     작업 완료 보고서
 ├── deploy/
 │   ├── api-golf.remo.re.kr.nginx   nginx vhost
 │   └── setup-api-golf.sh           vhost 배치 + 인증서 발급

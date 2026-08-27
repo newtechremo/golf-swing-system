@@ -18,7 +18,10 @@
 | [05-integration-status.md](./05-integration-status.md) | **연동 검토** — GitHub / REMO AI API / 포트 / 서버 구조 (서버 이전 후속작업 누락 분석) |
 | [06-execution-plan.md](./06-execution-plan.md) | 실행 플랜 상세 — Phase 0~6 작업 지시서 (파일:라인 단위 diff · 검증 · 롤백). **07번이 순서·범위를 재조정했으므로 diff 참조용으로 사용** |
 | [07-deployment-architecture.md](./07-deployment-architecture.md) | 배포 아키텍처 판정 — Vercel 이전 가능성, 30~60초 문제, 백엔드 필요성, DB 진단 (**판단 근거**) |
-| [08-detailed-work-plan.md](./08-detailed-work-plan.md) | ⭐ **실행 기준 문서 (확정본)** — 전략: 프론트만 Vercel · 백엔드+DB 서버 유지. 작업 ID 22개 · 체크리스트 · 위험요소 |
+| [08-detailed-work-plan.md](./08-detailed-work-plan.md) | 실행 플랜 + **진행 현황** — STEP 0~3 완료 상태, 항목별 결과 |
+| [**09-api-reference.md**](./09-api-reference.md) | ⭐ **자체 API 레퍼런스** — 24개 엔드포인트, 인증 체계, 요청 제한, 개발 주의사항 |
+| [**10-remo-api-reference.md**](./10-remo-api-reference.md) | ⭐ **REMO AI API 레퍼런스** — 실측 기반. 동기/비동기 차이, 응답 필드, 에러코드 |
+| [**11-completion-report.md**](./11-completion-report.md) | ⭐ **작업 완료 보고서** — 전체 결과 종합 |
 
 ---
 
@@ -83,7 +86,9 @@
 
 ## 이 문서들을 읽는 순서
 
-1. **지금부터 무엇을 할지 알고 싶다** → **08** (실행 기준) → 판단근거는 07, 추가 diff 는 06
+1. **작업 결과를 알고 싶다** → **11** (완료 보고서)
+2. **API 를 다뤄야 한다** → **09** (자체 API) · **10** (REMO AI API)
+3. 남은 작업이 궁금하다 → **11 §9** 또는 [`CURRENT_STATUS.md`](../CURRENT_STATUS.md)
 2. 서버 이전 후속작업이 무엇이 남았는지 → **05**
 3. 시스템을 처음 인수인계 받았다 → **01 → 02 → 05 → 03 → 06**
 4. 왜 이 작업이 필요한지 근거가 궁금하다 → **03** (문제) → **06** (해법)
