@@ -53,6 +53,54 @@ aws route53 change-resource-record-sets --hosted-zone-id Z0575940EHXG9YRNO7QK --
 
 ### 2026-08-27
 
+### [2026-08-27] GitHub Actions 배포 실패 — SERVER_HOST 오설정 (내가 만든 문제) + 포트포워딩 미해결
+
+**증상** — `dial tcp 216.150.1.1:***: i/o timeout`
+
+**원인 1 (해결)** — `SERVER_HOST` 가 `golf.remo.re.kr` 이었다.
+2026-08-26 에 이 도메인을 **Vercel 로 넘기면서** A 레코드가 Vercel 엣지(216.150.x.x)로 바뀌었다.
+그 뒤로 Actions 는 서버가 아니라 **Vercel 엣지에 SSH 를 시도**하고 있었다.
+
+```
+golf.remo.re.kr      → 216.150.1.129, 216.150.16.129  (Vercel)
+api-golf.remo.re.kr  → 49.169.8.19                    (서버)
+```
+
+→ `SERVER_HOST` 를 `api-golf.remo.re.kr` 로 갱신했다.
+
+**원인 2 (미해결)** — 갱신 후에도 `dial tcp 49.169.8.19:***: i/o timeout`.
+
+| 확인 항목 | 결과 |
+|-----------|------|
+| sshd 프로세스 | active |
+| 리스닝 | `0.0.0.0:22`, `[::]:22` |
+| ufw | 비활성 |
+| 127.0.0.1:22 | 접속됨 |
+
+서버 안쪽은 정상이다. **공유기/NAT 에서 SSH 포트가 외부로 포워딩되지 않는다.**
+서버 이전 시 포트포워딩 규칙이 넘어오지 않은 것으로 보인다. 라우터 설정이 필요하다.
+
+**현재 영향**
+
+| 대상 | 배포 경로 | 상태 |
+|------|-----------|------|
+| 프론트엔드 | Vercel (git push 감지) | 🟢 정상 — Actions 와 무관 |
+| 백엔드 | GitHub Actions → SSH | 🔴 불가 → **수동 배포 중** |
+
+백엔드 수동 배포:
+```bash
+cd backend && npm run build && pm2 restart golf-backend --update-env
+```
+
+> 이 서버는 **자기 공인 IP 로 되돌아오지 못한다**(헤어핀 NAT).
+> `https://api-golf.remo.re.kr` 도, 그 API 를 호출하는 프로덕션 프론트도
+> 서버 안에서는 검증할 수 없다. nginx 검증은 `--resolve` 로 우회한다:
+> ```bash
+> curl -k --resolve api-golf.remo.re.kr:443:127.0.0.1 https://api-golf.remo.re.kr/api/health
+> ```
+
+---
+
 ### [2026-08-27] 결과서(PDF) 기능 완성
 
 **문제** — 앞뒤는 있는데 중간이 비어 있었다
